@@ -1,8 +1,173 @@
+// -----------------------------------------------------------------------------
+// nav-data-frontend.tsx
+// Estructura de navegación para la barra lateral (navbar) del frontend.
+// Cada objeto en el array representa una sección del menú y cada item es una ruta o grupo de rutas.
+// -----------------------------------------------------------------------------
 import { Icon } from "@/components/icon";
 import type { NavProps } from "@/components/nav";
 import { Badge } from "@/ui/badge";
 
+/**
+ * Estructura de una sección de la barra lateral:
+ * - name: Nombre de la sección (puede ser string o key de traducción)
+ * - items: Array de rutas o grupos de rutas
+ *
+ * Estructura de un item (ruta):
+ * - title: Nombre visible o key de traducción
+ * - path: Ruta a la que navega
+ * - icon: (opcional) Icono a mostrar
+ * - info: (opcional) Badge o información extra
+ * - children: (opcional) Submenús o rutas anidadas
+ * - disabled, hidden, auth, caption: (opcional) Propiedades adicionales para control de acceso, visibilidad, etc.
+ *
+ * Ejemplo básico de item:
+ * {
+ *   title: "Dashboard",
+ *   path: "/dashboard",
+ *   icon: <Icon icon="solar:home-2-bold-duotone" size="24" />,
+ *   info: <Badge variant="destructive">5</Badge>,
+ * }
+ */
+
 export const frontendNavData: NavProps["data"] = [
+	// BusTix Modules
+	{
+		name: "BusTix",
+		items: [
+			{
+				title: "Dashboard",
+				path: "/dashboard",
+				icon: <Icon icon="solar:home-2-bold-duotone" size="24" />,
+			},
+			{
+				title: "Notificaciones",
+				path: "/notifications",
+				icon: <Icon icon="solar:bell-bing-bold-duotone" size="24" />,
+				info: <Badge variant="destructive">5</Badge>,
+			},
+		],
+	},
+	{
+		name: "Eventos Masivos",
+		items: [
+			{
+				title: "Gestión de Eventos",
+				path: "/events",
+				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
+			},
+			{
+				title: "Rutas Públicas",
+				path: "/routes/public",
+				icon: <Icon icon="solar:map-point-bold-duotone" size="24" />,
+			},
+			{
+				title: "Boletos Vendidos",
+				path: "/tickets",
+				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
+			},
+			{
+				title: "Estadísticas Eventos",
+				path: "/analytics/events",
+				icon: <Icon icon="solar:chart-bold-duotone" size="24" />,
+			},
+		],
+	},
+	{
+		name: "Viajes Privados",
+		items: [
+			{
+				title: "Cotizaciones",
+				path: "/quotes",
+				icon: <Icon icon="solar:chat-round-money-bold-duotone" size="24" />,
+				info: <Badge variant="warning">3</Badge>,
+			},
+			{
+				title: "Reservas Privadas",
+				path: "/bookings/private",
+				icon: <Icon icon="solar:case-round-bold-duotone" size="24" />,
+			},
+			{
+				title: "Clientes Corporativos",
+				path: "/corporate",
+				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
+			},
+			{
+				title: "Contratos",
+				path: "/contracts",
+				icon: <Icon icon="solar:document-text-bold-duotone" size="24" />,
+			},
+		],
+	},
+	{
+		name: "Recursos Operativos",
+		items: [
+			{
+				title: "Flota de Vehículos",
+				path: "/fleet",
+				icon: <Icon icon="solar:bus-bold-duotone" size="24" />,
+			},
+			{
+				title: "Operadores",
+				path: "/operators",
+				icon: <Icon icon="solar:user-check-rounded-bold-duotone" size="24" />,
+			},
+			{
+				title: "Mantenimientos",
+				path: "/maintenance",
+				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
+			},
+			{
+				title: "Calendario General",
+				path: "/calendar-general",
+				icon: <Icon icon="solar:calendar-mark-bold-duotone" size="24" />,
+			},
+		],
+	},
+	{
+		name: "Finanzas",
+		items: [
+			{
+				title: "Ingresos y Ventas",
+				path: "/finance/revenue",
+				icon: <Icon icon="solar:dollar-bold-duotone" size="24" />,
+			},
+			{
+				title: "Facturación CFDI",
+				path: "/invoices",
+				icon: <Icon icon="solar:bill-list-bold-duotone" size="24" />,
+			},
+			{
+				title: "Reportes Financieros",
+				path: "/finance/reports",
+				icon: <Icon icon="solar:chart-2-bold-duotone" size="24" />,
+			},
+			{
+				title: "Servicios Adicionales",
+				path: "/services",
+				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
+			},
+		],
+	},
+	{
+		name: "Configuración",
+		items: [
+			{
+				title: "Precios y Tarifas",
+				path: "/settings/pricing",
+				icon: <Icon icon="solar:tag-price-bold-duotone" size="24" />,
+			},
+			{
+				title: "Usuarios y Roles",
+				path: "/settings/users",
+				icon: <Icon icon="solar:shield-user-bold-duotone" size="24" />,
+			},
+			{
+				title: "Configuración General",
+				path: "/settings",
+				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
+			},
+		],
+	},
 	{
 		name: "sys.nav.dashboard",
 		items: [
@@ -189,7 +354,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.permission.page_test",
 				path: "/permission/page-test",
 				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
-				auth: ["permission:read"],
+				auth: ["permission: "],
 				hidden: true,
 			},
 			{

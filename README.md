@@ -1,40 +1,3 @@
-<div align="center"> 
-<br> 
-<br>
-<img src="./src/assets/icons/ic-logo-badge.svg" height="140" />
-<h3> Slash Admin </h3>
-  <p>
-    <p style="font-size: 14px">
-      Slash Admin is a modern admin dashboard template built with React 19, Vite, shadcn/ui, and TypeScript. It is designed to help developers quickly create powerful admin management systems.
-    </p>
-    <br />
-    <br />
-    <a href="https://admin.slashspaces.com/">Preview</a>
-    ·
-    <a href="https://discord.gg/fXemAXVNDa">Discord</a>
-    ·
-    <a href="https://docs-admin.slashspaces.com/">Document</a>
-    <br />
-    <br />
-    <a href="https://trendshift.io/repositories/6387" target="_blank"><img src="https://trendshift.io/api/badge/repositories/6387" alt="d3george%2Fslash-admin | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
-
-**English** | [中文](./README.zh-CN.md)
-
-##  Sponsor
-<div style="display: flex; gap: 50px"> 
-  <img style="width:300px" src="https://d3george.github.io/github-static/pay/weixin.jpg" >
-  <img style="width:300px" src="https://d3george.github.io/github-static/pay/buymeacoffee.png" />
-</div>
-
-## Preview
-+ https://admin.slashspaces.com/
-
-|![login.png](https://d3george.github.io/github-static/slash-admin/sa-web-light.jpeg)|![login_dark.png](https://d3george.github.io/github-static/slash-admin/sa-web-dark.jpeg)
-| ----------------------------------------------------------------- | ------------------------------------------------------------------- |
-|![analysis.png](https://d3george.github.io/github-static/slash-admin/sa-mobile-light.jpeg)|![workbench.png](https://d3george.github.io/github-static/slash-admin/sa-mobile-dark.jpeg)
-| | 
-
 ## Features
 
 - Built using React 19 hooks.
@@ -98,3 +61,76 @@ pnpm build
 - `ci` modify CI configuration and scripts
 - `types` type definition file changes
 - `wip` in development
+
+## Cómo agregar rutas a la Navbar y personalizar el Header
+
+### Estructura de la Navbar (barra lateral)
+
+La barra lateral (navbar) se construye a partir de un arreglo de secciones, donde cada sección tiene un nombre (`name`) y un arreglo de items (`items`). Cada item puede ser una ruta, un grupo de rutas (con `children`), o un enlace especial. Esta estructura se encuentra en:
+
+`src/layouts/dashboard/nav/nav-data/nav-data-frontend.tsx`
+
+- **Sección:**
+  - `name`: Nombre de la sección (puede ser string o key de traducción)
+  - `items`: Array de rutas o grupos de rutas
+- **Item (ruta):**
+  - `title`: Nombre visible o key de traducción
+  - `path`: Ruta a la que navega
+  - `icon`: (opcional) Icono a mostrar
+  - `info`: (opcional) Badge o información extra
+  - `children`: (opcional) Submenús o rutas anidadas
+  - Otros: `disabled`, `hidden`, `auth`, `caption`, etc.
+
+La navbar se renderiza automáticamente recorriendo este arreglo, por lo que solo necesitas agregar o modificar secciones/items en este archivo para que aparezcan en la barra lateral.
+
+---
+
+### Agregar una ruta a la Navbar (barra lateral)
+
+Las rutas de la barra lateral se definen en el archivo:
+`src/layouts/dashboard/nav/nav-data/nav-data-frontend.tsx`
+
+Cada sección es un objeto con un nombre (`name`) y un arreglo de items (`items`). Cada item representa una ruta o grupo de rutas. Ejemplo básico:
+
+```typescript
+{
+  name: "BusTix",
+  items: [
+    {
+      title: "Dashboard",
+      path: "/dashboard",
+      icon: <Icon icon="solar:home-2-bold-duotone" size="24" />,
+    },
+    {
+      title: "Notificaciones",
+      path: "/notifications",
+      icon: <Icon icon="solar:bell-bing-bold-duotone" size="24" />,
+      info: <Badge variant="destructive">5</Badge>,
+    },
+  ],
+}
+```
+
+Puedes agregar más rutas siguiendo la misma estructura. Los campos más usados son:
+- `title`: Nombre visible o key de traducción
+- `path`: Ruta a la que navega
+- `icon`: (opcional) Icono a mostrar
+- `info`: (opcional) Badge o información extra
+- `children`: (opcional) Submenús o rutas anidadas
+
+---
+
+### Personalizar el Header (cabecera)
+
+El header principal del dashboard se encuentra en:
+`src/layouts/dashboard/header.tsx`
+
+Puedes personalizarlo usando la prop `leftSlot` para mostrar un elemento a la izquierda (por ejemplo, un botón de menú o un logo):
+
+```typescriptreact
+<Header leftSlot={<MiBotonMenu />} />
+```
+
+El header también muestra el breadcrumb (si está habilitado en settings) y los botones de notificación y configuración a la derecha. Es sticky, siempre visible en la parte superior.
+
+---

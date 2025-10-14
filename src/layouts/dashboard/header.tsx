@@ -1,20 +1,38 @@
-import { Icon } from "@/components/icon";
-import LocalePicker from "@/components/locale-picker";
+// -----------------------------------------------------------------------------
+// Header.tsx
+// Componente de cabecera para el dashboard. Muestra el breadcrumb, botones de notificación y configuración.
+// Permite inyectar un slot a la izquierda (leftSlot) para personalización.
+// -----------------------------------------------------------------------------
 import { useSettings } from "@/store/settingStore";
-import { Button } from "@/ui/button";
 import { cn } from "@/utils";
 import type { ReactNode } from "react";
-import AccountDropdown from "../components/account-dropdown";
 import BreadCrumb from "../components/bread-crumb";
 import NoticeButton from "../components/notice";
-import SearchBar from "../components/search-bar";
 import SettingButton from "../components/setting-button";
 
+/**
+ * Props para el componente Header.
+ * @property leftSlot - Elemento React opcional que se muestra a la izquierda del breadcrumb.
+ */
 interface HeaderProps {
 	leftSlot?: ReactNode;
 }
 
+/**
+ * Componente Header (cabecera principal del dashboard)
+ *
+ * Estructura y personalización:
+ * - leftSlot: Permite inyectar un elemento personalizado a la izquierda (por ejemplo, un botón de menú o logo).
+ * - Breadcrumb: Se muestra solo si está habilitado en settings y en pantallas medianas o grandes.
+ * - Botones a la derecha: Incluye notificaciones y configuración.
+ *
+ * Ejemplo de uso:
+ * <Header leftSlot={<MiBotonMenu />} />
+ *
+ * El componente es sticky, siempre visible en la parte superior.
+ */
 export default function Header({ leftSlot }: HeaderProps) {
+	// Obtiene el estado del breadcrumb desde el store de settings
 	const { breadCrumb } = useSettings();
 	return (
 		<header
@@ -26,34 +44,18 @@ export default function Header({ leftSlot }: HeaderProps) {
 				"h-[var(--layout-header-height)] ",
 			)}
 		>
+			{/* Sección izquierda: slot personalizado y breadcrumb */}
 			<div className="flex items-center">
 				{leftSlot}
 
+				{/* Breadcrumb solo visible en pantallas md+ y si está habilitado */}
 				<div className="hidden md:block ml-4">{breadCrumb && <BreadCrumb />}</div>
 			</div>
 
+			{/* Sección derecha: botones de notificación y configuración */}
 			<div className="flex items-center gap-1">
-				<SearchBar />
-				<LocalePicker />
-				<Button
-					variant="ghost"
-					size="icon"
-					className="rounded-full"
-					onClick={() => window.open("https://github.com/d3george/slash-admin")}
-				>
-					<Icon icon="mdi:github" size={24} />
-				</Button>
-				<Button
-					variant="ghost"
-					size="icon"
-					className="rounded-full"
-					onClick={() => window.open("https://discord.gg/fXemAXVNDa")}
-				>
-					<Icon icon="carbon:logo-discord" size={24} />
-				</Button>
 				<NoticeButton />
 				<SettingButton />
-				<AccountDropdown />
 			</div>
 		</header>
 	);
