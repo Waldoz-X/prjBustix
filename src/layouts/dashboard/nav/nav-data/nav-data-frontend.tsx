@@ -30,7 +30,7 @@ import { Badge } from "@/ui/badge";
  */
 
 export const frontendNavData: NavProps["data"] = [
-	// BusTix Modules
+	// BusTix Modules - Solo para usuarios autenticados
 	{
 		name: "BusTix",
 		items: [
@@ -38,12 +38,14 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Dashboard",
 				path: "/dashboard",
 				icon: <Icon icon="solar:home-2-bold-duotone" size="24" />,
+				// Visible para todos los usuarios autenticados
 			},
 			{
 				title: "Notificaciones",
 				path: "/notifications",
 				icon: <Icon icon="solar:bell-bing-bold-duotone" size="24" />,
 				info: <Badge variant="destructive">5</Badge>,
+				// Visible para todos los usuarios autenticados
 			},
 		],
 	},
@@ -54,21 +56,25 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Gestión de Eventos",
 				path: "/events",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Rutas Públicas",
 				path: "/routes/public",
 				icon: <Icon icon="solar:map-point-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
 			},
 			{
 				title: "Boletos Vendidos",
 				path: "/tickets",
 				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Estadísticas Eventos",
 				path: "/analytics/events",
 				icon: <Icon icon="solar:chart-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 		],
 	},
@@ -80,21 +86,25 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/quotes",
 				icon: <Icon icon="solar:chat-round-money-bold-duotone" size="24" />,
 				info: <Badge variant="warning">3</Badge>,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Reservas Privadas",
 				path: "/bookings/private",
 				icon: <Icon icon="solar:case-round-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Clientes Corporativos",
 				path: "/corporate",
 				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Contratos",
 				path: "/contracts",
 				icon: <Icon icon="solar:document-text-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 		],
 	},
@@ -105,21 +115,25 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Flota de Vehículos",
 				path: "/fleet",
 				icon: <Icon icon="solar:bus-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
 			},
 			{
 				title: "Operadores",
 				path: "/operators",
 				icon: <Icon icon="solar:user-check-rounded-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Mantenimientos",
 				path: "/maintenance",
 				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
 			},
 			{
 				title: "Calendario General",
 				path: "/calendar-general",
 				icon: <Icon icon="solar:calendar-mark-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
 			},
 		],
 	},
@@ -130,21 +144,25 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Ingresos y Ventas",
 				path: "/finance/revenue",
 				icon: <Icon icon="solar:dollar-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Facturación CFDI",
 				path: "/invoices",
 				icon: <Icon icon="solar:bill-list-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Reportes Financieros",
 				path: "/finance/reports",
 				icon: <Icon icon="solar:chart-2-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Servicios Adicionales",
 				path: "/services",
 				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 		],
 	},
@@ -152,22 +170,32 @@ export const frontendNavData: NavProps["data"] = [
 		name: "Configuración",
 		items: [
 			{
+				title: "Gestión de Usuarios",
+				path: "/users",
+				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
+				auth: ["Admin"], // Solo Admin
+			},
+			{
+				title: "Gestión de Roles",
+				path: "/roles",
+				icon: <Icon icon="solar:shield-user-bold-duotone" size="24" />,
+				auth: ["Admin"], // Solo Admin
+			},
+			{
 				title: "Precios y Tarifas",
 				path: "/settings/pricing",
 				icon: <Icon icon="solar:tag-price-bold-duotone" size="24" />,
-			},
-			{
-				title: "Usuarios y Roles",
-				path: "/settings/users",
-				icon: <Icon icon="solar:shield-user-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
 			{
 				title: "Configuración General",
 				path: "/settings",
 				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
+				auth: ["Admin"], // Solo Admin
 			},
 		],
 	},
+	// Las siguientes secciones son solo para desarrollo/testing - Solo Admin
 	{
 		name: "sys.nav.dashboard",
 		items: [
@@ -175,11 +203,13 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.workbench",
 				path: "/workbench",
 				icon: <Icon icon="local:ic-workbench" size="24" />,
+				auth: ["Admin"], // Solo Admin
 			},
 			{
 				title: "sys.nav.analysis",
 				path: "/analysis",
 				icon: <Icon icon="local:ic-analysis" size="24" />,
+				auth: ["Admin"], // Solo Admin
 			},
 		],
 	},
@@ -191,6 +221,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.management",
 				path: "/management",
 				icon: <Icon icon="local:ic-management" size="24" />,
+				auth: ["Admin"], // Solo Admin
 				children: [
 					{
 						title: "sys.nav.user.index",
@@ -231,6 +262,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.menulevel.index",
 				path: "/menu_level",
 				icon: <Icon icon="local:ic-menulevel" size="24" />,
+				auth: ["Admin"], // Solo Admin
 				children: [
 					{
 						title: "sys.nav.menulevel.1a",
@@ -267,6 +299,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.error.index",
 				path: "/error",
 				icon: <Icon icon="bxs:error-alt" size="24" />,
+				auth: ["Admin"], // Solo Admin
 				children: [
 					{
 						title: "sys.nav.error.403",
@@ -293,6 +326,7 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/components",
 				icon: <Icon icon="solar:widget-5-bold-duotone" size="24" />,
 				caption: "sys.nav.custom_ui_components",
+				auth: ["Admin"], // Solo Admin
 				children: [
 					{
 						title: "sys.nav.icon",
@@ -333,10 +367,12 @@ export const frontendNavData: NavProps["data"] = [
 					{
 						title: "sys.nav.clipboard",
 						path: "/functions/clipboard",
+						auth: ["Admin"], // Solo Admin
 					},
 					{
-						title: "sys.nav.token_expired",
+						title: "Cerrar Sesión",
 						path: "/functions/token_expired",
+						// Visible para todos los usuarios autenticados
 					},
 				],
 			},
@@ -349,6 +385,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.permission",
 				path: "/permission",
 				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
+				auth: ["Admin"], // Solo Admin
 			},
 			{
 				title: "sys.nav.permission.page_test",
@@ -362,11 +399,13 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/calendar",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
 				info: <Badge variant="warning">+12</Badge>,
+				auth: ["Admin"], // Solo Admin
 			},
 			{
 				title: "sys.nav.kanban",
 				path: "/kanban",
 				icon: <Icon icon="solar:clipboard-bold-duotone" size="24" />,
+				auth: ["Admin"], // Solo Admin
 			},
 			{
 				title: "sys.nav.disabled",
@@ -378,6 +417,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.label",
 				path: "#label",
 				icon: <Icon icon="local:ic-label" size="24" />,
+				auth: ["Admin"], // Solo Admin
 				info: (
 					<Badge variant="info">
 						<Icon icon="solar:bell-bing-bold-duotone" size={14} />
@@ -389,6 +429,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.link",
 				path: "/link",
 				icon: <Icon icon="local:ic-external" size="24" />,
+				auth: ["Admin"], // Solo Admin
 				children: [
 					{
 						title: "sys.nav.external_link",
@@ -404,6 +445,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.blank",
 				path: "/blank",
 				icon: <Icon icon="local:ic-blank" size="24" />,
+				auth: ["Admin"], // Solo Admin
 			},
 		],
 	},

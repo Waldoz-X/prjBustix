@@ -1,3 +1,4 @@
+import { useState } from "react";
 import avatar1 from "@/assets/images/avatars/avatar-1.png";
 import avatar2 from "@/assets/images/avatars/avatar-2.png";
 import avatar3 from "@/assets/images/avatars/avatar-3.png";
@@ -12,7 +13,6 @@ import { Card, CardContent } from "@/ui/card";
 import { Progress } from "@/ui/progress";
 import { Text, Title } from "@/ui/typography";
 import { rgbAlpha } from "@/utils/theme";
-import { useState } from "react";
 import BannerCard from "./banner-card";
 
 const quickStats = [
@@ -110,13 +110,19 @@ export default function Workbench() {
 		dataLabels: { enabled: false },
 		plotOptions: { pie: { donut: { size: "70%" } } },
 	});
+	const sparklineOptions = useChart({
+		chart: { sparkline: { enabled: true } },
+		grid: { show: false },
+		yaxis: { show: false },
+		tooltip: { enabled: false },
+	});
 
-	// throw new Error("test error"); // 注释掉直接抛错，改用演示组件
+	// throw new Error("test error"); // µ│¿ÚçèµÄëþø┤µÄÑµèøÚöÖ´╝îµö╣þö¿µ╝öþñ║þ╗äõ╗Â
 
 	return (
 		<div className="flex flex-col gap-4 w-full">
 			<BannerCard />
-			{/* 顶部四个统计卡片 */}
+			{/* ÚíÂÚâ¿Õøøõ©¬þ╗ƒÞ«íÕìíþëç */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				{quickStats.map((stat) => (
 					<Card key={stat.label} className="flex flex-col justify-between h-full">
@@ -148,13 +154,10 @@ export default function Workbench() {
 								<Chart
 									type="bar"
 									height={40}
-									options={useChart({
-										chart: { sparkline: { enabled: true } },
+									options={{
+										...sparklineOptions,
 										colors: [stat.color],
-										grid: { show: false },
-										yaxis: { show: false },
-										tooltip: { enabled: false },
-									})}
+									}}
 									series={[{ data: stat.chart }]}
 								/>
 							</div>
@@ -163,7 +166,7 @@ export default function Workbench() {
 				))}
 			</div>
 
-			{/* 月度收入+项目进度区块 */}
+			{/* µ£êÕ║ªµöÂÕàÑ+Úí╣þø«Þ┐øÕ║ªÕî║ÕØù */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 				<Card className="lg:col-span-2">
 					<CardContent className="p-6">
@@ -202,7 +205,7 @@ export default function Workbench() {
 				</Card>
 			</div>
 
-			{/* 项目概览区块 */}
+			{/* Úí╣þø«µªéÞºêÕî║ÕØù */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 				<Card className="lg:col-span-2 flex flex-col gap-4 p-6">
 					<Text variant="body2" className="font-semibold mb-2">
@@ -259,7 +262,7 @@ export default function Workbench() {
 				</Card>
 			</div>
 
-			{/* 交易+收入区块 */}
+			{/* õ║ñµÿô+µöÂÕàÑÕî║ÕØù */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 				<Card className="lg:col-span-2 flex flex-col p-6">
 					<div className="flex items-center gap-4 mb-4">

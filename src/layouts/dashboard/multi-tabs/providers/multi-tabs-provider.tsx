@@ -25,7 +25,7 @@ export function MultiTabsProvider({ children }: { children: React.ReactNode }) {
 		params: {},
 	};
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Dependencies are intentionally limited to avoid infinite loops
 	const activeTabRoutePath = useMemo(() => {
 		if (!currentRouteMeta) return "";
 		const { key } = currentRouteMeta;
@@ -34,7 +34,7 @@ export function MultiTabsProvider({ children }: { children: React.ReactNode }) {
 
 	const operations = useTabOperations(tabs, setTabs, activeTabRoutePath);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Dependencies are intentionally limited to prevent unnecessary re-renders
 	useEffect(() => {
 		if (!currentRouteMeta) return;
 
@@ -51,7 +51,7 @@ export function MultiTabsProvider({ children }: { children: React.ReactNode }) {
 						...currentRouteMeta,
 						key,
 						children,
-						timeStamp: new Date().getTime().toString(),
+						timeStamp: Date.now().toString(),
 					},
 				];
 			}

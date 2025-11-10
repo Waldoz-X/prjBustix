@@ -1,12 +1,18 @@
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-
-import userService, { type SignInReq } from "@/api/services/userService";
-
-import { toast } from "sonner";
-import type { UserInfo, UserToken } from "#/entity";
+import type { Permission, Role, UserInfo, UserToken } from "#/entity";
 import { StorageEnum } from "#/enum";
+import * as userService from "@/api/services/userService";
+import { logError, sanitizeForLog } from "../utils/error-handler";
+import { sanitizeEmail, validatePassword } from "../utils/security";
+
+// Tipos para el login
+export interface SignInReq {
+	email: string;
+	password: string;
+}
 
 type UserStore = {
 	userInfo: Partial<UserInfo>;
@@ -37,8 +43,8 @@ const useUserStore = create<UserStore>()(
 			},
 		}),
 		{
-			name: "userStore", // name of the item in the storage (must be unique)
-			storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
+			name: "userStore",
+			storage: createJSONStorage(() => localStorage),
 			partialize: (state) => ({
 				[StorageEnum.UserInfo]: state.userInfo,
 				[StorageEnum.UserToken]: state.userToken,
@@ -50,31 +56,95 @@ const useUserStore = create<UserStore>()(
 export const useUserInfo = () => useUserStore((state) => state.userInfo);
 export const useUserToken = () => useUserStore((state) => state.userToken);
 export const useUserPermissions = () => useUserStore((state) => state.userInfo.permissions || []);
-export const useUserRoles = () => useUserStore((state) => state.userInfo.roles || []);
 export const useUserActions = () => useUserStore((state) => state.actions);
 
 export const useSignIn = () => {
 	const { setUserToken, setUserInfo } = useUserActions();
 
 	const signInMutation = useMutation({
-		mutationFn: userService.signin,
+		mutationFn: ({ email, password }: SignInReq) => userService.login(email, password),
 	});
 
-	const signIn = async (data: SignInReq) => {
-		try {
-			const res = await signInMutation.mutateAsync(data);
-			const { user, accessToken, refreshToken } = res;
-			setUserToken({ accessToken, refreshToken });
-			setUserInfo(user);
-		} catch (err) {
-			toast.error(err.message, {
+	return async (data: SignInReq) => {
+		// 1. Sanitizar y validar datos de entrada
+		const sanitizedEmail = sanitizeEmail(data.email);
+		const passwordValidation = validatePassword(data.password);
+
+		if (!passwordValidation.valid) {
+			toast.error(passwordValidation.message, {
 				position: "top-center",
 			});
+			throw new Error(passwordValidation.message);
+		}
+
+		const sanitizedData: SignInReq = {
+			email: sanitizedEmail,
+			password: data.password,
+		};
+
+		try {
+			// 2. Intentar login - el backend maneja el bloqueo
+			const res = await signInMutation.mutateAsync(sanitizedData);
+			const { token, refreshToken } = res;
+
+			// 3. Login exitoso - guardar token
+			localStorage.setItem("token", token);
+			const expiresInMinutes = 60;
+			localStorage.setItem("tokenExpiry", String(Date.now() + expiresInMinutes * 60 * 1000));
+
+			// 4. Decodificar JWT y extraer información del usuario
+			const { getUserInfoFromToken } = await import("../utils/jwt");
+			const userInfo = getUserInfoFromToken(token);
+
+			// 5. Actualizar store con información completa
+			setUserToken({ accessToken: token, refreshToken: refreshToken || "" });
+
+			if (userInfo) {
+				const mappedRoles: Role[] = (userInfo.roles || []).map((r) => ({ id: r, name: r, code: r }));
+				const mappedPermissions: Permission[] = (userInfo.permissions || []).map((p) => ({ id: p, name: p, code: p }));
+
+				const userInfoToStore: UserInfo = {
+					id: userInfo.id,
+					email: userInfo.email,
+					username: userInfo.email,
+					avatar: "",
+					roles: mappedRoles,
+					permissions: mappedPermissions,
+				};
+
+				setUserInfo(userInfoToStore);
+
+				console.log("👤 Usuario autenticado:", {
+					name: userInfo.name,
+					email: userInfo.email,
+					roles: userInfo.roles,
+					permissions: userInfo.permissions,
+					isAdmin: userInfo.isAdmin,
+				});
+			}
+
+			// 6. Notificación de éxito
+			toast.success("¡Bienvenido!", {
+				description: userInfo ? `Has iniciado sesión como ${userInfo.name}` : "Has iniciado sesión correctamente",
+				position: "top-center",
+			});
+		} catch (err: any) {
+			// 7. Manejar error - el backend ya maneja el contador de intentos
+			const errorMessage = err.message || "Error al iniciar sesión";
+
+			// 8. Log del error (sin datos sensibles)
+			logError(err, sanitizeForLog({ email: sanitizedEmail }));
+
+			// 9. Mostrar mensaje del servidor al usuario
+			toast.error(errorMessage, {
+				position: "top-center",
+				duration: 5000,
+			});
+
+			// 13. Re-lanzar error para que el formulario lo maneje
 			throw err;
 		}
 	};
-
-	return signIn;
 };
 
 export default useUserStore;

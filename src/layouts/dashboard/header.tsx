@@ -3,9 +3,10 @@
 // Componente de cabecera para el dashboard. Muestra el breadcrumb, botones de notificación y configuración.
 // Permite inyectar un slot a la izquierda (leftSlot) para personalización.
 // -----------------------------------------------------------------------------
+
+import type { ReactNode } from "react";
 import { useSettings } from "@/store/settingStore";
 import { cn } from "@/utils";
-import type { ReactNode } from "react";
 import BreadCrumb from "../components/bread-crumb";
 import NoticeButton from "../components/notice";
 import SettingButton from "../components/setting-button";

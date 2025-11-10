@@ -1,3 +1,7 @@
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import screenfull from "screenfull";
+import { type ThemeColorPresets, ThemeLayout, ThemeMode } from "#/enum";
 import CyanBlur from "@/assets/images/background/cyan-blur.png";
 import RedBlur from "@/assets/images/background/red-blur.png";
 import { Icon } from "@/components/icon";
@@ -14,11 +18,6 @@ import { Switch } from "@/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import { Text } from "@/ui/typography";
 import { cn } from "@/utils";
-import { type CSSProperties, useCallback, useEffect, useState } from "react";
-
-import { useTranslation } from "react-i18next";
-import screenfull from "screenfull";
-import { type ThemeColorPresets, ThemeLayout, ThemeMode } from "#/enum";
 
 export default function SettingButton() {
 	const { t } = useTranslation();
@@ -262,14 +261,16 @@ export default function SettingButton() {
 							<Text variant="subTitle1">{t("sys.settings.presetThemes")}</Text>
 							<div className="flex flex-wrap gap-1">
 								{Object.entries(presetsColors).map(([preset, color]) => (
-									<div
+									<button
 										key={preset}
+										type="button"
 										className={cn(
-											"relative flex h-13 w-5 cursor-pointer items-center justify-center rounded transition-all duration-300 ease-in-out p-1",
+											"relative flex h-13 w-5 cursor-pointer items-center justify-center rounded transition-all duration-300 ease-in-out p-1 border-0",
 											themeColorPresets === preset && "w-13",
 										)}
 										style={{ backgroundColor: color.default }}
 										onClick={() => updateSettings({ themeColorPresets: preset as ThemeColorPresets })}
+										aria-label={`Select ${preset} theme preset`}
 									>
 										<div
 											className={cn(
@@ -279,7 +280,7 @@ export default function SettingButton() {
 										>
 											{themeColorPresets === preset && <Icon icon="bi:check-all" size={24} color="white" />}
 										</div>
-									</div>
+									</button>
 								))}
 							</div>
 						</div>
@@ -347,11 +348,9 @@ export default function SettingButton() {
 						variant="outline"
 						className="w-full border-dashed text-text-primary hover:border-primary hover:text-primary"
 						onClick={toggleFullScreen}
+						aria-label={isFullscreen ? t("sys.settings.exitFullscreen") : t("sys.settings.fullscreen")}
 					>
-						<div
-							className="flex items-center justify-center"
-							aria-label={isFullscreen ? t("sys.settings.exitFullscreen") : t("sys.settings.fullscreen")}
-						>
+						<div className="flex items-center justify-center">
 							{isFullscreen ? (
 								<>
 									<Icon icon="local:ic-settings-exit-fullscreen" />

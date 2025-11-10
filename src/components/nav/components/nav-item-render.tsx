@@ -21,9 +21,13 @@ export const NavItemRenderer: React.FC<NavItemRendererProps> = ({ item, classNam
 	if (hasChild) {
 		// Vertical nav items with children are clickable containers
 		return (
-			<div className={className} onClick={onClick}>
+			<button
+				type="button"
+				className={className}
+				onClick={onClick as unknown as React.MouseEventHandler<HTMLButtonElement>}
+			>
 				{children}
-			</div>
+			</button>
 		);
 	}
 

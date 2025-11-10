@@ -1,7 +1,7 @@
+import type { CSSProperties } from "react";
+import * as React from "react";
 import { Avatar, AvatarFallback } from "@/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
-import * as React from "react";
-import type { CSSProperties } from "react";
 
 interface AvatarGroupProps {
 	children: React.ReactNode;
@@ -61,7 +61,7 @@ export function AvatarGroup({ children, max, size }: AvatarGroupProps) {
 	return (
 		<div className="flex -space-x-3">
 			{displayAvatars.map((child, idx) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+				// biome-ignore lint/suspicious/noArrayIndexKey: Children array is static and order doesn't change
 				<div key={idx}>{cloneAvatarWithSize(child)}</div>
 			))}
 			{extra > 0 && (
@@ -76,7 +76,7 @@ export function AvatarGroup({ children, max, size }: AvatarGroupProps) {
 					<TooltipContent>
 						<div className="flex gap-1">
 							{extraAvatars.map((child, idx) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: Children array is static and order doesn't change
 								<div key={idx}>{cloneAvatarWithSize(child)}</div>
 							))}
 						</div>

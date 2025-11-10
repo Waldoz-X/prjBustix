@@ -103,6 +103,8 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{ path: "calendar", element: Component("/pages/sys/others/calendar") },
 		{ path: "kanban", element: Component("/pages/sys/others/kanban") },
 		{ path: "blank", element: Component("/pages/sys/others/blank") },
+		{ path: "roles", element: Component("/pages/roles") },
+		{ path: "users", element: Component("/pages/users") },
 	];
 	return frontendDashboardRoutes;
 }

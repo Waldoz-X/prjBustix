@@ -1,8 +1,8 @@
+import { useMemo } from "react";
 import MotionViewport from "@/components/animate/motion-viewport";
 import { getVariant } from "@/components/animate/variants";
 import { themeVars } from "@/theme/theme.css";
 import { Card } from "@/ui/card";
-import { useMemo } from "react";
 
 type Props = {
 	variant: string;
@@ -17,7 +17,7 @@ export default function ContainerView({ variant }: Props) {
 			style={{ backgroundColor: themeVars.colors.background.neutral }}
 		>
 			{[...Array(40)].map((_, index) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+				// biome-ignore lint/suspicious/noArrayIndexKey: Static array of fixed size doesn't change
 				<MotionViewport key={index} variants={varients} className="mt-4">
 					<Card>
 						<span className="text-center">Item {index + 1}</span>

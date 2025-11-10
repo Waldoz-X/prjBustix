@@ -1,11 +1,11 @@
+import { faker } from "@faker-js/faker";
+import { type ChangeEvent, useState } from "react";
 import { Icon } from "@/components/icon";
 import { useCopyToClipboard } from "@/hooks";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
 import { Input } from "@/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
-import { faker } from "@faker-js/faker";
-import { type ChangeEvent, useState } from "react";
 
 export default function ClipboardPage() {
 	const { copyFn } = useCopyToClipboard();
@@ -37,7 +37,9 @@ export default function ClipboardPage() {
 				</div>
 				<div>
 					<h5 className="mb-2 font-medium">ON DOUBLE CLICK</h5>
-					<div onDoubleClick={() => copyFn(textOnClick)}>{textOnClick}</div>
+					<button type="button" onDoubleClick={() => copyFn(textOnClick)} className="text-left w-full">
+						{textOnClick}
+					</button>
 				</div>
 			</CardContent>
 		</Card>

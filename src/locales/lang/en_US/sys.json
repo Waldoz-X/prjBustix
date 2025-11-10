@@ -126,7 +126,7 @@
 				"user_detail": "User Detail"
 			},
 			"toast": "Toast",
-			"token_expired": "Token Expired",
+			"token_expired": "Logout",
 			"upload": "Upload",
 			"user": {
 				"account": "Account",

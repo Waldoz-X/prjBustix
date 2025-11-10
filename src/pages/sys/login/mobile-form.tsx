@@ -1,11 +1,11 @@
-import { Button } from "@/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
-import { Input } from "@/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/ui/input-otp";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
+import { Input } from "@/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/ui/input-otp";
 import { ReturnButton } from "./components/ReturnButton";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 
@@ -96,7 +96,7 @@ function MobileForm() {
 						<FormItem>
 							<FormLabel className="flex items-center justify-between">
 								<span className="text-sm">{t("sys.login.smsCode")}</span>
-								<span className="text-sm text-muted-foreground" onClick={start}>
+								<button type="button" className="text-sm text-muted-foreground" onClick={start}>
 									{countdown === 0 ? (
 										<span>{t("sys.login.sendSmsButton")}</span>
 									) : (
@@ -112,7 +112,7 @@ function MobileForm() {
 											<span className="ml-1">{t("sys.login.sendSmsText", { second })}</span>
 										</div>
 									)}
-								</span>
+								</button>
 							</FormLabel>
 							<FormControl>
 								<InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS_AND_CHARS} {...field}>
