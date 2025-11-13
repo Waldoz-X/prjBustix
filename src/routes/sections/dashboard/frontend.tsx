@@ -3,7 +3,7 @@ import { Navigate } from "react-router";
 import { Component } from "./utils";
 
 export function getFrontendDashboardRoutes(): RouteObject[] {
-	const frontendDashboardRoutes: RouteObject[] = [
+	return [
 		{ path: "workbench", element: Component("/pages/dashboard/workbench") },
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "debug-auth", element: Component("/pages/dashboard/debug-auth") },
@@ -31,7 +31,15 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{
 			path: "management",
 			children: [
-				{ index: true, element: <Navigate to="user" replace /> },
+				{ index: true, element: <Navigate to="users" replace /> },
+				{
+					path: "users",
+					children: [
+						{ index: true, element: <Navigate to="list" replace /> },
+						{ path: "list", element: Component("/pages/management/users/list") },
+						{ path: "roles", element: Component("/pages/management/users/roles") },
+					],
+				},
 				{
 					path: "user",
 					children: [
@@ -104,8 +112,5 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{ path: "calendar", element: Component("/pages/sys/others/calendar") },
 		{ path: "kanban", element: Component("/pages/sys/others/kanban") },
 		{ path: "blank", element: Component("/pages/sys/others/blank") },
-		{ path: "roles", element: Component("/pages/roles") },
-		{ path: "users", element: Component("/pages/users") },
 	];
-	return frontendDashboardRoutes;
 }

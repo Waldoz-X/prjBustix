@@ -81,7 +81,9 @@ export default function RolesPage() {
 
 	// Estados para asignar/remover roles
 	const [isAssignOpen, setIsAssignOpen] = useState(false);
-	const [assignRoleName, setAssignRoleName] = useState("");
+	// guardamos roleId y label por separado para usar el id en la API y mostrar el nombre
+	const [assignRoleId, setAssignRoleId] = useState<string>("");
+	const [assignRoleLabel, setAssignRoleLabel] = useState<string>("");
 	const [assignEmail, setAssignEmail] = useState("");
 	const [assignUserId, setAssignUserId] = useState("");
 	const [isRemoveMode, setIsRemoveMode] = useState(false);
@@ -105,14 +107,17 @@ export default function RolesPage() {
 
 	// Query para obtener todos los roles
 	const {
-		data: roles,
+		data: rolesResponse,
 		isLoading,
 		error,
-	} = useQuery({
+	} = useQuery<import("@/api/services/roleService").RolesListResponse, Error>({
 		queryKey: ["roles"],
-		queryFn: roleService.getAll,
+		queryFn: () => roleService.getAll(),
 		retry: 1,
 	});
+
+	// normalizamos a un array de roles para usar en la UI
+	const roles: RoleDto[] = rolesResponse?.data ?? [];
 
 	// Mutation para crear rol
 	const createMutation = useMutation({
@@ -170,10 +175,9 @@ export default function RolesPage() {
 		},
 	});
 
-	// Mutation para asignar rol a usuario
+	// Mutation para asignar rol a usuario (usa AssignRoleDto)
 	const assignMutation = useMutation({
-		mutationFn: ({ roleName, data }: { roleName: string; data: AssignRoleDto }) =>
-			roleService.assignToUser(roleName, data),
+		mutationFn: (data: AssignRoleDto) => roleService.assignToUser(data),
 		onSuccess: () => {
 			toast.success("Rol asignado", {
 				description: "El rol se ha asignado correctamente al usuario",
@@ -181,7 +185,8 @@ export default function RolesPage() {
 			setIsAssignOpen(false);
 			setAssignEmail("");
 			setAssignUserId("");
-			setAssignRoleName("");
+			setAssignRoleId("");
+			setAssignRoleLabel("");
 		},
 		onError: (err: any) => {
 			const safeError = handleApiError(err);
@@ -193,8 +198,7 @@ export default function RolesPage() {
 
 	// Mutation para remover rol de usuario
 	const removeMutation = useMutation({
-		mutationFn: ({ roleName, data }: { roleName: string; data: AssignRoleDto }) =>
-			roleService.removeFromUser(roleName, data),
+		mutationFn: ({ roleId, userId }: { roleId: string; userId: string }) => roleService.removeFromUser(roleId, userId),
 		onSuccess: () => {
 			toast.success("Rol removido", {
 				description: "El rol se ha removido correctamente del usuario",
@@ -202,7 +206,8 @@ export default function RolesPage() {
 			setIsAssignOpen(false);
 			setAssignEmail("");
 			setAssignUserId("");
-			setAssignRoleName("");
+			setAssignRoleId("");
+			setAssignRoleLabel("");
 		},
 		onError: (err: any) => {
 			const safeError = handleApiError(err);
@@ -244,36 +249,37 @@ export default function RolesPage() {
 		}
 	};
 
-	const handleAssignRole = (roleName: string, isRemove: boolean = false) => {
-		setAssignRoleName(roleName);
+	const handleAssignRole = (roleId: string, roleLabel: string, isRemove: boolean = false) => {
+		setAssignRoleId(roleId);
+		setAssignRoleLabel(roleLabel);
 		setIsRemoveMode(isRemove);
 		setIsAssignOpen(true);
 	};
 
 	const handleSubmitAssignRemove = () => {
-		if (!assignRoleName) {
+		if (!assignRoleId) {
 			toast.error("Rol requerido", {
 				description: "Por favor selecciona un rol",
 			});
 			return;
 		}
 
-		if (!assignEmail.trim() && !assignUserId.trim()) {
+		if (!assignUserId.trim()) {
 			toast.error("Usuario requerido", {
-				description: "Por favor ingresa un email o ID de usuario",
+				description: "Por favor ingresa el ID del usuario (userId)",
 			});
 			return;
 		}
 
 		const data: AssignRoleDto = {
-			email: assignEmail.trim() || undefined,
-			userId: assignUserId.trim() || undefined,
+			userId: assignUserId.trim(),
+			roleId: assignRoleId,
 		};
 
 		if (isRemoveMode) {
-			removeMutation.mutate({ roleName: assignRoleName, data });
+			removeMutation.mutate({ roleId: assignRoleId, userId: assignUserId.trim() });
 		} else {
-			assignMutation.mutate({ roleName: assignRoleName, data });
+			assignMutation.mutate(data);
 		}
 	};
 
@@ -484,7 +490,7 @@ export default function RolesPage() {
 														variant="outline"
 														size="sm"
 														className="flex-1"
-														onClick={() => handleAssignRole(role.name, false)}
+														onClick={() => handleAssignRole(role.id, role.name, false)}
 													>
 														<UserPlus className="mr-1 h-3 w-3" />
 														Asignar
@@ -493,7 +499,7 @@ export default function RolesPage() {
 														variant="outline"
 														size="sm"
 														className="flex-1"
-														onClick={() => handleAssignRole(role.name, true)}
+														onClick={() => handleAssignRole(role.id, role.name, true)}
 													>
 														<UserMinus className="mr-1 h-3 w-3" />
 														Remover
@@ -532,8 +538,8 @@ export default function RolesPage() {
 								<DialogTitle>{isRemoveMode ? "Remover Rol de Usuario" : "Asignar Rol a Usuario"}</DialogTitle>
 								<DialogDescription>
 									{isRemoveMode
-										? `Remover el rol "${assignRoleName}" del usuario`
-										: `Asignar el rol "${assignRoleName}" al usuario`}
+										? `Remover el rol "${assignRoleLabel}" del usuario`
+										: `Asignar el rol "${assignRoleLabel}" al usuario`}
 								</DialogDescription>
 							</DialogHeader>
 							<div className="space-y-4 py-4">
@@ -603,11 +609,15 @@ export default function RolesPage() {
 												</div>
 											</div>
 											<div className="flex gap-2">
-												<Button variant="default" size="sm" onClick={() => handleAssignRole(role.name, false)}>
+												<Button variant="default" size="sm" onClick={() => handleAssignRole(role.id, role.name, false)}>
 													<UserPlus className="mr-1 h-4 w-4" />
 													Asignar
 												</Button>
-												<Button variant="destructive" size="sm" onClick={() => handleAssignRole(role.name, true)}>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => handleAssignRole(role.id, role.name, true)}
+												>
 													<UserMinus className="mr-1 h-4 w-4" />
 													Remover
 												</Button>

@@ -171,15 +171,19 @@ export const frontendNavData: NavProps["data"] = [
 		items: [
 			{
 				title: "Gestión de Usuarios",
-				path: "/users",
+				path: "/management/users",
 				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
 				auth: ["Admin"], // Solo Admin
-			},
-			{
-				title: "Gestión de Roles",
-				path: "/roles",
-				icon: <Icon icon="solar:shield-user-bold-duotone" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				children: [
+					{
+						title: "Lista de Usuarios",
+						path: "/management/users/list",
+					},
+					{
+						title: "Roles y Permisos",
+						path: "/management/users/roles",
+					},
+				],
 			},
 			{
 				title: "Precios y Tarifas",
