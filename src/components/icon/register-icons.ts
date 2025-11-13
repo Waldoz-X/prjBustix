@@ -1,5 +1,6 @@
 import { addCollection } from "@iconify/react";
 import { parseSVGContent } from "@iconify/utils/lib/svg/parse";
+import { logger } from "@/utils/logger";
 
 interface IconifyIcon {
 	body: string;
@@ -54,13 +55,13 @@ export default async function registerLocalIcons() {
 				// Parse SVG content
 				const parsedSVG = parseSVGContent(svgContent as string) as ParsedSVG;
 				if (!parsedSVG) {
-					console.warn(`Failed to parse SVG: ${iconName}`);
+					logger.warn(`Failed to parse SVG: ${iconName}`);
 					continue;
 				}
 
 				// Ensure body is valid content
 				if (!parsedSVG.body) {
-					console.warn(`Failed to get SVG body for ${iconName}`);
+					logger.warn(`Failed to get SVG body for ${iconName}`);
 					continue;
 				}
 
@@ -85,7 +86,7 @@ export default async function registerLocalIcons() {
 				};
 			}
 		} catch (error) {
-			console.error("Error processing SVG:", error);
+			logger.error("Error processing SVG:", error);
 		}
 	}
 
@@ -101,6 +102,6 @@ export default async function registerLocalIcons() {
 	});
 
 	if (!result) {
-		console.warn("Failed to add icon collection");
+		logger.warn("Failed to add icon collection");
 	}
 }

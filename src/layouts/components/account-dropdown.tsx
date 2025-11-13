@@ -11,6 +11,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
+import { logger } from "@/utils/logger";
 
 /**
  * Account Dropdown
@@ -26,7 +27,7 @@ export default function AccountDropdown() {
 			clearUserInfoAndToken();
 			backToLogin();
 		} catch (error) {
-			console.log(error);
+			logger.error(error);
 		} finally {
 			replace("/auth/login");
 		}

@@ -6,6 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { ReturnButton } from "./components/ReturnButton";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
+import { logger } from "@/utils/logger";
 
 function ResetForm() {
 	const { t } = useTranslation();
@@ -13,7 +14,7 @@ function ResetForm() {
 	const form = useForm();
 
 	const onFinish = (values: any) => {
-		console.log("Received values of form: ", values);
+		logger.debug("ResetForm values:", values);
 	};
 
 	if (loginState !== LoginStateEnum.RESET_PASSWORD) return null;

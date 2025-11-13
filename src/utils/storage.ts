@@ -1,4 +1,5 @@
 import type { StorageEnum } from "#/enum";
+import { logger } from "./logger";
 
 export const getItem = <T>(key: StorageEnum): T | null => {
 	let value = null;
@@ -8,7 +9,7 @@ export const getItem = <T>(key: StorageEnum): T | null => {
 			value = JSON.parse(result);
 		}
 	} catch (error) {
-		console.error(error);
+		logger.error(error);
 	}
 	return value;
 };
@@ -18,11 +19,23 @@ export const getStringItem = (key: StorageEnum): string | null => {
 };
 
 export const setItem = <T>(key: StorageEnum, value: T): void => {
-	localStorage.setItem(key, JSON.stringify(value));
+	try {
+		localStorage.setItem(key, JSON.stringify(value));
+	} catch (error) {
+		logger.error("Error setting item to localStorage:", error);
+	}
 };
 export const removeItem = (key: StorageEnum): void => {
-	localStorage.removeItem(key);
+	try {
+		localStorage.removeItem(key);
+	} catch (error) {
+		logger.error("Error removing item from localStorage:", error);
+	}
 };
 export const clearItems = () => {
-	localStorage.clear();
+	try {
+		localStorage.clear();
+	} catch (error) {
+		logger.error("Error clearing localStorage:", error);
+	}
 };

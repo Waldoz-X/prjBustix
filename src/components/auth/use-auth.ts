@@ -22,6 +22,15 @@ export const useAuthCheck = (baseOn: "role" | "permission" = "permission") => {
 	const { accessToken } = useUserToken();
 	const { permissions = [], roles = [] } = useUserInfo();
 
+	// Normalize roles to check for Admin (handle strings and objects)
+	const normalizedRoles = roles.map((r: any) => {
+		if (typeof r === "string") return r.toLowerCase();
+		return (r?.name ?? r?.code ?? r?.id ?? "").toLowerCase();
+	});
+
+	// If user is Admin, grant access to everything
+	const isAdmin = normalizedRoles.includes("admin") || normalizedRoles.includes("*");
+
 	// depends on baseOn to select resource pool
 	const resourcePool = baseOn === "role" ? roles : permissions;
 
@@ -31,7 +40,20 @@ export const useAuthCheck = (baseOn: "role" | "permission" = "permission") => {
 		if (!accessToken) {
 			return false;
 		}
-		return resourcePool.some((p) => p.code === item);
+
+		// Admin has access to everything
+		if (isAdmin) {
+			return true;
+		}
+
+		// Check in resource pool (handle both strings and objects)
+		return resourcePool.some((p: any) => {
+			if (typeof p === "string") {
+				return p.toLowerCase() === item.toLowerCase();
+			}
+			const value = p?.code ?? p?.name ?? p?.id ?? "";
+			return value.toLowerCase() === item.toLowerCase();
+		});
 	};
 
 	// check if any item exists
@@ -39,6 +61,12 @@ export const useAuthCheck = (baseOn: "role" | "permission" = "permission") => {
 		if (items.length === 0) {
 			return true;
 		}
+
+		// Admin has access to everything
+		if (isAdmin) {
+			return true;
+		}
+
 		return items.some((item) => check(item));
 	};
 
@@ -47,6 +75,12 @@ export const useAuthCheck = (baseOn: "role" | "permission" = "permission") => {
 		if (items.length === 0) {
 			return true;
 		}
+
+		// Admin has access to everything
+		if (isAdmin) {
+			return true;
+		}
+
 		return items.every((item) => check(item));
 	};
 

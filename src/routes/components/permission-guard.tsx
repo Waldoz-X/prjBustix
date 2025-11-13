@@ -1,7 +1,17 @@
 import { Navigate } from "react-router";
 import { toast } from "sonner";
-import { useUserToken } from "@/store/userStore";
+import { useUserToken, useUserInfo } from "@/store/userStore";
 import { hasAnyPermission, hasPermission, isTokenValid } from "@/utils/jwt";
+
+// Utility to check admin role from store (handles string or object roles)
+const isAdminFromStore = (userInfo: any) => {
+	const roles = userInfo?.roles || [];
+	const normalized = roles
+		.map((r: any) => (r && typeof r === "object" ? (r.name ?? r.code ?? r.id) : r))
+		.filter(Boolean)
+		.map((s: any) => String(s).toLowerCase());
+	return normalized.includes("admin") || normalized.includes("*");
+};
 
 type Props = {
 	children: React.ReactNode;
@@ -19,10 +29,16 @@ type Props = {
  */
 export default function PermissionGuard({ children, permission, anyPermission, fallbackPath = "/403" }: Props) {
 	const { accessToken } = useUserToken();
+	const userInfo = useUserInfo();
 
 	// Si no hay token válido, redirigir al login
 	if (!accessToken || !isTokenValid(accessToken)) {
 		return <Navigate to="/auth/login" replace />;
+	}
+
+	// If user has Admin role in store, allow everything
+	if (isAdminFromStore(userInfo)) {
+		return <>{children}</>;
 	}
 
 	// Verificar permiso específico

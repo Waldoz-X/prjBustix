@@ -24,18 +24,36 @@ const hasPermission = (item: MenuItem, userPermissions: any[], userRoles: any[])
 		return true;
 	}
 
-	// Verificar por rol
+	// Normalize user roles to strings (handle both string and object roles)
+	const normalizedUserRoleNames = (userRoles || [])
+		.map((r) => {
+			const v = (r as any)?.name ?? (r as any)?.code ?? (r as any)?.id ?? r;
+			return v == null ? "" : String(v).toLowerCase();
+		})
+		.filter(Boolean);
+
+	// If the user is Admin (role name 'admin') or has a wildcard role, show everything
+	if (normalizedUserRoleNames.includes("admin") || normalizedUserRoleNames.includes("*")) {
+		return true;
+	}
+
+	// Verificar por rol (item.roles puede ser un array de strings)
 	if (item.roles && item.roles.length > 0) {
-		const userRoleNames = userRoles.map((r) => r.name || r.code || r.id);
-		const hasRole = item.roles.some((role) => userRoleNames.includes(role));
+		const itemRolesLower = item.roles.map((r) => String(r).toLowerCase());
+		const hasRole = itemRolesLower.some((role) => normalizedUserRoleNames.includes(role));
 		if (hasRole) return true;
 	}
 
+	// Normalize user permissions (handle strings o objetos)
+	const normalizedUserPermissionNames = (userPermissions || [])
+		.map((p) => (typeof p === "string" ? p : p?.name || p?.code || p?.id))
+		.filter(Boolean)
+		.map((s) => String(s));
+
 	// Verificar por permiso
 	if (item.permission) {
-		const userPermissionNames = userPermissions.map((p) => p.name || p.code || p.id);
 		// Verificar si tiene el permiso específico o es Admin (tiene *)
-		if (userPermissionNames.includes("*") || userPermissionNames.includes(item.permission)) {
+		if (normalizedUserPermissionNames.includes("*") || normalizedUserPermissionNames.includes(item.permission)) {
 			return true;
 		}
 	}
@@ -68,7 +86,7 @@ export const useFilteredMenu = (menu: MenuItem[]) => {
 	const userInfo = useUserInfo();
 	const userPermissions = useUserPermissions();
 
-	const filteredMenu = useMemo(() => {
+	return useMemo(() => {
 		if (!userInfo || !userPermissions) {
 			return [];
 		}
@@ -76,10 +94,20 @@ export const useFilteredMenu = (menu: MenuItem[]) => {
 		const roles = userInfo.roles || [];
 		const permissions = userPermissions || [];
 
+		// If user has Admin role (string or object), return the original menu unfiltered
+		const normalizedRoleNames = (roles || [])
+			.map((r) => {
+				const v = (r as any)?.name ?? (r as any)?.code ?? (r as any)?.id ?? r;
+				return v == null ? "" : String(v).toLowerCase();
+			})
+			.filter(Boolean);
+
+		if (normalizedRoleNames.includes("admin") || normalizedRoleNames.includes("*")) {
+			return menu;
+		}
+
 		return filterMenu(menu, permissions, roles);
 	}, [menu, userPermissions, userInfo]);
-
-	return filteredMenu;
 };
 
 export default useFilteredMenu;

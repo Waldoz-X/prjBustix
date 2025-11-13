@@ -8,6 +8,7 @@ import { Icon } from "@/components/icon";
 import { useUserActions } from "@/store/userStore";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { logger } from "@/utils/logger";
 
 export default function TokenExpired() {
 	const navigate = useNavigate();
@@ -30,7 +31,7 @@ export default function TokenExpired() {
 			}, 1000);
 		},
 		onError: (error: any) => {
-			console.error("Error al cerrar sesión:", error);
+			logger.error("Error al cerrar sesión:", error);
 
 			// Aunque falle, limpiar local storage y redirigir
 			clearUserInfoAndToken();

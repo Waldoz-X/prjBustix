@@ -6,6 +6,7 @@ import type { Permission, Role, UserInfo, UserToken } from "#/entity";
 import { StorageEnum } from "#/enum";
 import * as userService from "@/api/services/userService";
 import { logError, sanitizeForLog } from "../utils/error-handler";
+import { logger } from "@/utils/logger";
 import { sanitizeEmail, validatePassword } from "../utils/security";
 
 // Tipos para el login
@@ -114,7 +115,7 @@ export const useSignIn = () => {
 
 				setUserInfo(userInfoToStore);
 
-				console.log("👤 Usuario autenticado:", {
+				logger.info("Usuario autenticado", {
 					name: userInfo.name,
 					email: userInfo.email,
 					roles: userInfo.roles,

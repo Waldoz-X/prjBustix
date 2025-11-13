@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * Utilidades de seguridad para sanitización y validación
  */
@@ -77,7 +79,7 @@ class LoginAttemptTracker {
 		try {
 			localStorage.setItem(this.storageKey, JSON.stringify(this.attempts));
 		} catch (error) {
-			console.error("Error saving login attempts", error);
+			logger.error("Error saving login attempts", error);
 		}
 	}
 

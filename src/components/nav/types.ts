@@ -18,12 +18,14 @@ export type NavItemDataProps = {
 	caption?: string;
 	auth?: string[];
 	children?: NavItemDataProps[];
+	// Allow a generic onClick handler usable by divs and buttons
+	onClick?: React.MouseEventHandler<any>;
 } & NavItemStateProps;
 
 /**
  * Item
  */
-export type NavItemProps = React.ComponentProps<"div"> & NavItemDataProps & NavItemOptionsProps;
+export type NavItemProps = Omit<React.ComponentProps<"div">, "onClick"> & NavItemDataProps & NavItemOptionsProps;
 
 /**
  * List

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { NavItemDataProps } from "@/components/nav/types";
 import { GLOBAL_CONFIG } from "@/global-config";
-import { useUserPermissions } from "@/store/userStore";
+import { useUserPermissions, useUserInfo } from "@/store/userStore";
 import { checkAny } from "@/utils";
 import { backendNavData } from "./nav-data-backend";
 import { frontendNavData } from "./nav-data-frontend";
@@ -66,7 +66,21 @@ const filterNavData = (permissions: string[]) => {
  */
 export const useFilteredNavData = () => {
 	const permissions = useUserPermissions();
+	const userInfo = useUserInfo();
+
 	const permissionCodes = useMemo(() => permissions.map((p) => p.code), [permissions]);
-	const filteredNavData = useMemo(() => filterNavData(permissionCodes), [permissionCodes]);
-	return filteredNavData;
+
+	// If user has Admin role, return full navData
+	const isAdmin = useMemo(() => {
+		const roles = userInfo?.roles || [];
+		const normalized = roles
+			.map((r) => {
+				const v = (r as any)?.name ?? (r as any)?.code ?? (r as any)?.id ?? r;
+				return v == null ? "" : String(v).toLowerCase();
+			})
+			.filter(Boolean);
+		return normalized.includes("admin") || normalized.includes("*");
+	}, [userInfo]);
+
+	return useMemo(() => (isAdmin ? navData : filterNavData(permissionCodes)), [permissionCodes, isAdmin]);
 };

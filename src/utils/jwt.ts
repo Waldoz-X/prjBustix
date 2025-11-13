@@ -2,6 +2,7 @@
  * Utilidades para trabajar con JWT y permisos
  */
 import { jwtDecode } from "jwt-decode";
+import { logger } from "./logger";
 
 /**
  * Estructura del JWT decodificado según tu API
@@ -41,7 +42,7 @@ export function decodeToken(token: string): DecodedJWT | null {
 		const decoded = jwtDecode<DecodedJWT>(token);
 		return decoded;
 	} catch (error) {
-		console.error("Error decoding JWT:", error);
+		logger.error("Error decoding JWT:", error);
 		return null;
 	}
 }
@@ -52,26 +53,20 @@ export function decodeToken(token: string): DecodedJWT | null {
 export function getRolesFromToken(token: string): string[] {
 	const decoded = decodeToken(token);
 	if (!decoded) {
-		console.error("❌ No se pudo decodificar el token");
+		// No podemos decodificar el token, devolver array vacío
+		logger.warn("decodeToken: token inválido o decodificación fallida");
 		return [];
 	}
 
-	console.log("🔍 JWT Decodificado completo:", decoded);
-	console.log("🎭 Rol en JWT:", decoded.role);
-	console.log("🔑 Tipo de rol:", typeof decoded.role);
-
 	// El rol puede venir como string o array
 	if (Array.isArray(decoded.role)) {
-		console.log("✅ Roles encontrados (array):", decoded.role);
-		return decoded.role;
+		return decoded.role.map((r) => String(r));
 	}
 
 	if (typeof decoded.role === "string") {
-		console.log("✅ Rol encontrado (string):", [decoded.role]);
 		return [decoded.role];
 	}
 
-	console.warn("⚠️ No se encontró rol en el token");
 	return [];
 }
 
@@ -98,19 +93,19 @@ export function getPermissionsFromToken(token: string): string[] {
  * Verifica si el usuario tiene un rol específico
  */
 export function hasRole(token: string, role: string): boolean {
-	const roles = getRolesFromToken(token);
-	return roles.includes(role);
+	const roles = getRolesFromToken(token).map((r) => String(r).toLowerCase());
+	return roles.includes(role.toLowerCase());
 }
 
 /**
  * Verifica si el usuario es Admin (tiene acceso total)
  */
 export function isAdmin(token: string): boolean {
-	const roles = getRolesFromToken(token);
+	const roles = getRolesFromToken(token).map((r) => String(r).toLowerCase());
 	const permissions = getPermissionsFromToken(token);
 
 	// Si tiene rol Admin o permiso wildcard "*"
-	return roles.includes("Admin") || permissions.includes("*");
+	return roles.includes("admin") || roles.includes("*") || permissions.includes("*");
 }
 
 /**
@@ -186,7 +181,7 @@ export function isTokenExpired(token: string): boolean {
 		const currentTime = Date.now() / 1000;
 		return decoded.exp < currentTime;
 	} catch (error) {
-		console.error("Error checking token expiration:", error);
+		logger.error("Error checking token expiration:", error);
 		return true;
 	}
 }
@@ -215,7 +210,7 @@ export function getStoredToken(): string | null {
 	try {
 		return localStorage.getItem("token");
 	} catch (error) {
-		console.error("Error getting token from localStorage:", error);
+		logger.error("Error getting token from localStorage:", error);
 		return null;
 	}
 }
@@ -238,6 +233,6 @@ export function clearSession(): void {
 		localStorage.removeItem("refreshToken");
 		localStorage.removeItem("userStore");
 	} catch (error) {
-		console.error("Error clearing session:", error);
+		logger.error("Error clearing session:", error);
 	}
 }

@@ -8,6 +8,7 @@ import { Input } from "@/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/ui/input-otp";
 import { ReturnButton } from "./components/ReturnButton";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
+import { logger } from "@/utils/logger";
 
 interface CountdownProps {
 	value: number;
@@ -63,7 +64,7 @@ function MobileForm() {
 	};
 
 	const onFinish = (values: MobileFormValues) => {
-		console.log("Received values of form: ", values);
+		logger.debug("MobileForm values:", values);
 	};
 
 	return (

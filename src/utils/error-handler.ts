@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * Manejo seguro de errores - No expone detalles sensibles al usuario
  */
@@ -24,7 +26,7 @@ export interface SafeError {
 export function handleApiError(error: any): SafeError {
 	// Log completo del error para debugging (solo en desarrollo)
 	if (import.meta.env.DEV) {
-		console.error("[API Error]", error);
+		logger.error("[API Error]", error);
 	}
 
 	// Error de red
@@ -90,15 +92,17 @@ export function handleApiError(error: any): SafeError {
  */
 export function logError(error: SafeError, context?: Record<string, any>): void {
 	// En producción, esto se enviaría a un servicio de logging
-	if (import.meta.env.PROD) {
-		// TODO: Integrar con servicio de logging (ej: Sentry, LogRocket)
-		console.error("[Error Log]", {
+	if (import.meta.env.DEV) {
+		logger.error("[Error Log]", {
 			type: error.type,
 			code: error.code,
 			technical: error.technicalMessage,
 			context,
 			timestamp: new Date().toISOString(),
 		});
+	} else {
+		// En producción preferimos enviar a un servicio y evitar prints en consola
+		// TODO: enviar a Sentry u otro servicio de observabilidad
 	}
 }
 

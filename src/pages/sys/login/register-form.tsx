@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/ui/input";
 import { cn } from "@/utils";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
+import { logger } from "@/utils/logger";
 
 function RegisterForm() {
 	const { t } = useTranslation();
@@ -28,7 +29,7 @@ function RegisterForm() {
 			}, 2000);
 		},
 		onError: (error: any) => {
-			console.error("Error en registro:", error);
+			logger.error("Error en registro:", error);
 			setLoading(false);
 
 			// Manejar diferentes tipos de errores
@@ -59,7 +60,7 @@ function RegisterForm() {
 	});
 
 	const onFinish = async (values: RegisterDto) => {
-		console.log("Datos de registro:", values);
+		logger.debug("RegisterForm values:", values);
 
 		// Validar que las contraseñas coincidan
 		const confirmPassword = (form.getValues() as any).confirmPassword;

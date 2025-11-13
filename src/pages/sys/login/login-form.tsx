@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/ui/input";
 import { cn } from "@/utils";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
+import { logger } from "@/utils/logger";
 
 export function LoginForm({ className }: { className?: string }) {
 	const { t } = useTranslation();
@@ -42,7 +43,7 @@ export function LoginForm({ className }: { className?: string }) {
 			}, 500);
 		} catch (error) {
 			// El error ya es manejado en el store con mensajes del backend
-			console.error("Login failed:", error);
+			logger.error("Login failed:", error);
 		} finally {
 			setLoading(false);
 		}
