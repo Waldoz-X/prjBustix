@@ -58,6 +58,8 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 						{ path: "user/:id", element: Component("/pages/management/system/user/detail") },
 					],
 				},
+				// Ruta de cupones
+				{ path: "cupones", element: Component("/pages/management/cupones") },
 			],
 		},
 		{

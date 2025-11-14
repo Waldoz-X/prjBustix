@@ -195,6 +195,15 @@ const MANAGEMENT_PERMISSION = {
 				},
 			],
 		},
+		{
+			id: "0249937641030251",
+			parentId: "0901673425580518",
+			label: "sys.nav.cupones.index",
+			name: "Cupones",
+			type: PermissionType.MENU,
+			route: "cupones",
+			component: "/pages/management/cupones/index.tsx",
+		},
 	],
 };
 const COMPONENTS_PERMISSION = {

@@ -164,6 +164,12 @@ export const frontendNavData: NavProps["data"] = [
 				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
 				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
+			{
+				title: "Cupones de Descuento",
+				path: "/management/cupones",
+				icon: <Icon icon="solar:ticket-sale-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"], // Solo Admin y Manager
+			},
 		],
 	},
 	{

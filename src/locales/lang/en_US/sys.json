@@ -125,6 +125,9 @@
 				"user": "User",
 				"user_detail": "User Detail"
 			},
+			"cupones": {
+				"index": "Coupons"
+			},
 			"toast": "Toast",
 			"token_expired": "Logout",
 			"upload": "Upload",
