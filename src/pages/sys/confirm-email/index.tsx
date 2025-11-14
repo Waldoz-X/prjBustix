@@ -14,7 +14,7 @@ export default function ConfirmEmail() {
 	const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 	const [message, setMessage] = useState("");
 
-	const confirmMutation = useMutation({
+	const confirmMutation = useMutation<{ message?: string }, Error, { email: string; token: string }>({
 		mutationFn: ({ email, token }: { email: string; token: string }) => userService.confirmEmail(email, token),
 		onSuccess: (data) => {
 			setStatus("success");

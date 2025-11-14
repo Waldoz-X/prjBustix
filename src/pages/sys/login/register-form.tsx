@@ -18,7 +18,7 @@ function RegisterForm() {
 	const { loginState, backToLogin, setLoginState } = useLoginStateContext();
 	const [loading, setLoading] = useState(false);
 
-	const signUpMutation = useMutation({
+	const signUpMutation = useMutation<{ message?: string }, Error, RegisterDto>({
 		mutationFn: userService.register,
 		onSuccess: (data) => {
 			toast.success(data.message || "Cuenta creada exitosamente. Por favor revisa tu email para confirmar tu cuenta.");

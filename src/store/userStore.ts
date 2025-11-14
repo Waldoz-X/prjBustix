@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Permission, Role, UserInfo, UserToken } from "#/entity";
 import { StorageEnum } from "#/enum";
-import * as userService from "@/api/services/userService";
+import userService, { type LoginResponse } from "@/api/services/userService";
 import { logError, sanitizeForLog } from "../utils/error-handler";
 import { logger } from "@/utils/logger";
 import { sanitizeEmail, validatePassword } from "../utils/security";
@@ -62,7 +62,7 @@ export const useUserActions = () => useUserStore((state) => state.actions);
 export const useSignIn = () => {
 	const { setUserToken, setUserInfo } = useUserActions();
 
-	const signInMutation = useMutation({
+	const signInMutation = useMutation<LoginResponse, Error, SignInReq>({
 		mutationFn: ({ email, password }: SignInReq) => userService.login(email, password),
 	});
 

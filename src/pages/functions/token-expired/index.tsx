@@ -14,7 +14,7 @@ export default function TokenExpired() {
 	const navigate = useNavigate();
 	const { clearUserInfoAndToken } = useUserActions();
 
-	const logoutMutation = useMutation({
+	const logoutMutation = useMutation<{ message?: string }, Error>({
 		mutationFn: userService.logout,
 		onSuccess: (data) => {
 			// Limpiar storage local

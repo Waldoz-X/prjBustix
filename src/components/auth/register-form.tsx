@@ -45,7 +45,7 @@ export function RegisterForm({ onSuccess, showRoleSelector = false, defaultRole 
 		},
 	});
 
-	const registerMutation = useMutation({
+	const registerMutation = useMutation<{ message?: string }, Error, RegisterDto>({
 		mutationFn: (data: RegisterDto) => userService.register(data),
 		onSuccess: (response) => {
 			toast.success("Registro exitoso", {

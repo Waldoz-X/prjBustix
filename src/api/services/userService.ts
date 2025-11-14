@@ -1,17 +1,81 @@
 /**
- * Servicio de API para gestión completa de usuarios
- * Sincronizado con API BusTix - Endpoints mejorados
+ * Servicio de API para gestión de usuarios
+ * Endpoints: GET, POST, PUT usuarios y gestión de estatus
  */
-import type {
-	ApiResponse,
-	LoginResponseDto,
-	RegisterDto,
-	UpdateUserDto,
-	UpdateUserStatusDto,
-	UserDetailDto,
-	UserStatsDto,
-	UserStatus,
-} from "@/types/user";
+
+export enum UserStatus {
+	Activo = 0,
+	Inactivo = 1,
+	Suspendido = 2,
+	Bloqueado = 3,
+}
+
+export interface UserDto {
+	id: string;
+	email: string;
+	nombreCompleto: string;
+	roles: string[];
+	phoneNumber: string;
+	phoneNumberConfirmed: boolean;
+	accessFailedCount: number;
+	estatus: UserStatus;
+	estatusNombre: string;
+	fechaRegistro: string;
+	tipoDocumento: string;
+	numeroDocumento: string;
+	emailConfirmed: boolean;
+}
+
+export interface CreateUserDto {
+	emailAddress: string;
+	nombreCompleto: string;
+	password: string;
+	roles: string[];
+	tipoDocumento?: string;
+	numeroDocumento?: string;
+}
+
+// DTO para registro público
+export interface RegisterDto {
+	emailAddress: string;
+	nombreCompleto: string;
+	password: string;
+	tipoDocumento?: string;
+	numeroDocumento?: string;
+}
+
+// Respuesta de login
+export interface LoginResponse {
+	token: string;
+	refreshToken?: string;
+	user?: UserDto;
+	message?: string;
+}
+
+export interface UpdateUserProfileDto {
+	nombreCompleto: string;
+	phoneNumber?: string;
+	tipoDocumento?: string;
+	numeroDocumento?: string;
+}
+
+export interface UpdateUserStatusDto {
+	estatus: UserStatus;
+}
+
+export interface UserStatsDto {
+	totalUsers: number;
+	activeUsers: number;
+	inactiveUsers: number;
+	suspendedUsers: number;
+	lockedUsers: number;
+}
+
+export interface LockoutInfoDto {
+	isLockedOut: boolean;
+	lockoutEnd?: string;
+	accessFailedCount: number;
+}
 
 const BASE_URL = "http://localhost:5289/api/Account";
 
@@ -27,291 +91,286 @@ const getToken = (): string | null => {
  */
 const getHeaders = () => ({
 	"Content-Type": "application/json",
+	Accept: "application/json, text/plain",
 	Authorization: `Bearer ${getToken()}`,
 });
 
 /**
- * Headers para requests sin autenticación
+ * Maneja errores de respuesta
  */
-const getPublicHeaders = () => ({
-	"Content-Type": "application/json",
-});
-
-/**
- * 1️⃣ Registro de Usuario (con documento)
- */
-export const register = async (data: RegisterDto): Promise<ApiResponse> => {
-	const response = await fetch(`${BASE_URL}/register`, {
-		method: "POST",
-		headers: getPublicHeaders(),
-		body: JSON.stringify(data),
-	});
-
+const handleResponse = async (response: Response) => {
 	if (!response.ok) {
 		const error: any = new Error();
 		error.status = response.status;
-		error.message =
-			response.status === 400
-				? "Datos inválidos. Verifica el formato de email y contraseña."
-				: "Error al registrar usuario";
-		throw error;
-	}
 
-	return response.json();
-};
-
-/**
- * 2️⃣ Login (retorna token + refreshToken)
- * Maneja mensajes de bloqueo del backend
- */
-export const login = async (email: string, password: string): Promise<LoginResponseDto> => {
-	const response = await fetch(`${BASE_URL}/login`, {
-		method: "POST",
-		headers: getPublicHeaders(),
-		body: JSON.stringify({ email, password }),
-	});
-
-	if (!response.ok) {
-		// Intentar obtener el mensaje del backend
-		let errorMessage = "Error al iniciar sesión";
 		try {
 			const errorData = await response.json();
-			errorMessage = errorData.message || errorData.Message || errorMessage;
-		} catch (_e) {
-			// Si no hay JSON, usar mensaje por defecto
+			error.message = errorData.message || errorData.title || `Error ${response.status}`;
+			error.errors = errorData.errors;
+		} catch {
 			if (response.status === 401) {
-				errorMessage = "Credenciales inválidas";
+				error.message = "No autorizado. Por favor, inicia sesión.";
+			} else if (response.status === 403) {
+				error.message = "No tienes permisos para realizar esta acción.";
+			} else if (response.status === 404) {
+				error.message = "Usuario no encontrado.";
+			} else {
+				error.message = `Error ${response.status}`;
 			}
 		}
 
-		const error: any = new Error(errorMessage);
-		error.status = response.status;
-		error.message = errorMessage;
 		throw error;
 	}
 
-	return response.json();
+	const text = await response.text();
+	if (!text) return null;
+
+	try {
+		return JSON.parse(text);
+	} catch {
+		return text;
+	}
 };
 
 /**
- * 6️⃣ Obtener Mi Información (con campos nuevos)
+ * Login
  */
-export const getMyProfile = async (): Promise<UserDetailDto> => {
-	const response = await fetch(`${BASE_URL}/detail`, {
+const login = async (email: string, password: string): Promise<LoginResponse> => {
+	const response = await fetch(`${BASE_URL}/login`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({ email, password }),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Logout
+ */
+const logout = async (): Promise<{ message?: string }> => {
+	const response = await fetch(`${BASE_URL}/logout`, {
+		method: "POST",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Registro público
+ */
+const register = async (data: RegisterDto): Promise<{ message?: string }> => {
+	const response = await fetch(`${BASE_URL}/register`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify(data),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Confirmar email
+ */
+const confirmEmail = async (email: string, token: string): Promise<{ message?: string }> => {
+	const response = await fetch(`${BASE_URL}/confirm-email`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({ email, token }),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Obtener todos los usuarios por estatus
+ */
+const getUsersByStatus = async (estatusId: number): Promise<UserDto[]> => {
+	const response = await fetch(`${BASE_URL}/users/by-status/${estatusId}`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = response.status === 401 ? "No autorizado" : "Error al obtener perfil";
-		throw error;
-	}
-
-	return response.json();
+	const data = await handleResponse(response);
+	return Array.isArray(data) ? data : [];
 };
 
 /**
- * 7️⃣ Actualizar Mi Perfil (incluye documento)
+ * Obtener un usuario por ID
  */
-export const updateMyProfile = async (data: UpdateUserDto): Promise<ApiResponse> => {
+const getUserById = async (userId: string): Promise<UserDto> => {
+	const response = await fetch(`${BASE_URL}/${userId}`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Obtener estadísticas de usuarios
+ */
+const getStats = async (): Promise<UserStatsDto> => {
+	const response = await fetch(`${BASE_URL}/stats`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Obtener todos los estatus disponibles
+ */
+const getStatuses = async (): Promise<Array<{ id: number; name: string }>> => {
+	const response = await fetch(`${BASE_URL}/statuses`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Obtener permisos del usuario actual
+ */
+const getPermissions = async (): Promise<string[]> => {
+	const response = await fetch(`${BASE_URL}/permissions`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Crear un nuevo usuario (registro)
+ */
+const createUser = async (data: CreateUserDto): Promise<string> => {
+	const response = await fetch(`${BASE_URL}/register`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Actualizar perfil de usuario
+ */
+const updateProfile = async (data: UpdateUserProfileDto): Promise<void> => {
 	const response = await fetch(`${BASE_URL}/update-profile`, {
 		method: "PUT",
 		headers: getHeaders(),
 		body: JSON.stringify(data),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = "Error al actualizar perfil";
-		throw error;
-	}
-
-	return response.json();
+	return await handleResponse(response);
 };
 
 /**
- * 1️⃣1️⃣ Listar Todos los Usuarios (con campos nuevos)
+ * Actualizar estatus de un usuario
  */
-export const getAllUsers = async (): Promise<UserDetailDto[]> => {
-	const response = await fetch(BASE_URL, {
-		method: "GET",
-		headers: getHeaders(),
-	});
-
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = response.status === 403 ? "No tienes permisos para ver usuarios" : "Error al obtener usuarios";
-		throw error;
-	}
-
-	return response.json();
-};
-
-/**
- * 1️⃣2️⃣ Obtener Usuario por ID
- */
-export const getUserById = async (userId: string): Promise<UserDetailDto> => {
-	const response = await fetch(`${BASE_URL}/${userId}`, {
-		method: "GET",
-		headers: getHeaders(),
-	});
-
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = response.status === 404 ? "Usuario no encontrado" : "Error al obtener usuario";
-		throw error;
-	}
-
-	return response.json();
-};
-
-/**
- * 1️⃣3️⃣ Cambiar Estatus de Usuario
- */
-export const updateUserStatus = async (userId: string, data: UpdateUserStatusDto): Promise<ApiResponse> => {
+const updateStatus = async (userId: string, data: UpdateUserStatusDto): Promise<void> => {
 	const response = await fetch(`${BASE_URL}/${userId}/status`, {
 		method: "PUT",
 		headers: getHeaders(),
 		body: JSON.stringify(data),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = response.status === 403 ? "No tienes permisos para cambiar estatus" : "Error al actualizar estatus";
-		throw error;
-	}
-
-	return response.json();
+	return await handleResponse(response);
 };
 
 /**
- * 1️⃣4️⃣ Obtener Catálogo de Estatus
+ * Desbloquear usuario
  */
-export const getStatuses = async (): Promise<UserStatus[]> => {
-	const response = await fetch(`${BASE_URL}/statuses`, {
-		method: "GET",
-		headers: getHeaders(),
-	});
-
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = "Error al obtener catálogo de estatus";
-		throw error;
-	}
-
-	return response.json();
-};
-
-/**
- * 1️⃣5️⃣ Filtrar Usuarios por Estatus
- */
-export const getUsersByStatus = async (estatusId: number): Promise<UserDetailDto[]> => {
-	const response = await fetch(`${BASE_URL}/users/by-status/${estatusId}`, {
-		method: "GET",
-		headers: getHeaders(),
-	});
-
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = "Error al filtrar usuarios";
-		throw error;
-	}
-
-	return response.json();
-};
-
-/**
- * 1️⃣6️⃣ Estadísticas de Usuarios
- */
-export const getUserStats = async (): Promise<UserStatsDto> => {
-	const response = await fetch(`${BASE_URL}/stats`, {
-		method: "GET",
-		headers: getHeaders(),
-	});
-
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = "Error al obtener estadísticas";
-		throw error;
-	}
-
-	return response.json();
-};
-
-/**
- * 9️⃣ Logout - Cerrar Sesión
- * Invalida el RefreshToken en el servidor
- */
-export const logout = async (): Promise<ApiResponse> => {
-	const response = await fetch(`${BASE_URL}/logout`, {
+const unlockUser = async (userId: string): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/${userId}/unlock`, {
 		method: "POST",
 		headers: getHeaders(),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = "Error al cerrar sesión";
-		throw error;
-	}
-
-	return response.json();
+	return await handleResponse(response);
 };
 
 /**
- * 🔟 Confirm Email - Confirmar Email
- * Confirma el email del usuario con el token recibido por correo
+ * Bloquear usuario
  */
-export const confirmEmail = async (email: string, token: string): Promise<ApiResponse> => {
-	const response = await fetch(`${BASE_URL}/confirm-email`, {
+const lockUser = async (userId: string, minutes: number = 30): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/${userId}/lock?minutes=${minutes}`, {
 		method: "POST",
-		headers: getPublicHeaders(),
-		body: JSON.stringify({ email, token }),
+		headers: getHeaders(),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-
-		try {
-			const errorData = await response.json();
-			error.message = errorData.message || "Error al confirmar email";
-		} catch {
-			error.message = "Error al confirmar email";
-		}
-
-		throw error;
-	}
-
-	return response.json();
+	return await handleResponse(response);
 };
 
-// ============================================================================
-// 📦 EXPORTAR SERVICIO COMO DEFAULT
-// ============================================================================
+/**
+ * Resetear intentos fallidos de login
+ */
+const resetFailedAttempts = async (userId: string): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/${userId}/reset-failed-attempts`, {
+		method: "POST",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * Obtener usuarios bloqueados
+ */
+const getLockedUsers = async (): Promise<UserDto[]> => {
+	const response = await fetch(`${BASE_URL}/locked-users`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	const data = await handleResponse(response);
+	return Array.isArray(data) ? data : [];
+};
+
+/**
+ * Obtener información de bloqueo de un usuario
+ */
+const getLockoutInfo = async (userId: string): Promise<LockoutInfoDto> => {
+	const response = await fetch(`${BASE_URL}/${userId}/lockout-info`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
 
 const userService = {
-	register,
 	login,
 	logout,
+	register,
 	confirmEmail,
-	getMyProfile,
-	updateMyProfile,
-	getAllUsers,
-	getUserById,
-	updateUserStatus,
-	getStatuses,
 	getUsersByStatus,
-	getUserStats,
+	getUserById,
+	getStats,
+	getStatuses,
+	getPermissions,
+	createUser,
+	updateProfile,
+	updateStatus,
+	unlockUser,
+	lockUser,
+	resetFailedAttempts,
+	getLockedUsers,
+	getLockoutInfo,
 };
 
 export default userService;

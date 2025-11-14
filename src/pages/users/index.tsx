@@ -2,8 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Calendar, Filter, Loader2, Search, TrendingUp, UserCheck, UserCog, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import * as userService from "@/api/services/userService";
-import type { UpdateUserStatusDto, UserDetailDto } from "@/types/user";
+import userService, { type UserDto, UserStatus } from "@/api/services/userService";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -18,31 +17,36 @@ import { handleApiError } from "@/utils/error-handler";
  * Mapping de estatus a colores y variantes de badge
  */
 const STATUS_CONFIG: Record<number, { variant: any; label: string; color: string }> = {
-	1: { variant: "default", label: "Activo", color: "text-green-600" },
-	2: { variant: "secondary", label: "Inactivo", color: "text-gray-600" },
-	3: { variant: "default", label: "Validado", color: "text-blue-600" },
-	4: { variant: "warning", label: "Pendiente", color: "text-yellow-600" },
-	5: { variant: "destructive", label: "Cancelado", color: "text-red-600" },
-	6: { variant: "destructive", label: "Suspendido", color: "text-orange-600" },
-	7: { variant: "destructive", label: "Bloqueado", color: "text-red-800" },
+	0: { variant: "default", label: "Activo", color: "text-green-600" },
+	1: { variant: "secondary", label: "Inactivo", color: "text-gray-600" },
+	2: { variant: "destructive", label: "Suspendido", color: "text-orange-600" },
+	3: { variant: "destructive", label: "Bloqueado", color: "text-red-600" },
 };
 
 export default function UsersManagementPage() {
 	const queryClient = useQueryClient();
 	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState<number | "all">("all");
-	const [selectedUser, setSelectedUser] = useState<UserDetailDto | null>(null);
+	const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
 	const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-	const [newStatus, setNewStatus] = useState<number>(1);
+	const [newStatus, setNewStatus] = useState<number>(UserStatus.Activo);
 
 	// Queries
-	const { data: users, isLoading: usersLoading } = useQuery({
+	const { data: users = [], isLoading: usersLoading } = useQuery({
 		queryKey: ["users"],
-		queryFn: userService.getAllUsers,
+		queryFn: async () => {
+			const [active, inactive, suspended, blocked] = await Promise.all([
+				userService.getUsersByStatus(UserStatus.Activo),
+				userService.getUsersByStatus(UserStatus.Inactivo),
+				userService.getUsersByStatus(UserStatus.Suspendido),
+				userService.getUsersByStatus(UserStatus.Bloqueado),
+			]);
+			return [...active, ...inactive, ...suspended, ...blocked];
+		},
 		retry: 1,
 	});
 
-	const { data: statuses } = useQuery({
+	const { data: statuses = [] } = useQuery({
 		queryKey: ["user-statuses"],
 		queryFn: userService.getStatuses,
 		retry: 1,
@@ -50,14 +54,14 @@ export default function UsersManagementPage() {
 
 	const { data: stats } = useQuery({
 		queryKey: ["user-stats"],
-		queryFn: userService.getUserStats,
+		queryFn: userService.getStats,
 		retry: 1,
 	});
 
 	// Mutation para cambiar estatus
 	const updateStatusMutation = useMutation({
-		mutationFn: ({ userId, data }: { userId: string; data: UpdateUserStatusDto }) =>
-			userService.updateUserStatus(userId, data),
+		mutationFn: ({ userId, data }: { userId: string; data: { estatus: UserStatus } }) =>
+			userService.updateStatus(userId, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
@@ -91,7 +95,7 @@ export default function UsersManagementPage() {
 			const term = searchTerm.toLowerCase();
 			filtered = filtered.filter(
 				(u) =>
-					u.fullName.toLowerCase().includes(term) ||
+					u.nombreCompleto.toLowerCase().includes(term) ||
 					u.email.toLowerCase().includes(term) ||
 					u.numeroDocumento?.toLowerCase().includes(term),
 			);
@@ -100,7 +104,7 @@ export default function UsersManagementPage() {
 		return filtered;
 	}, [users, statusFilter, searchTerm]);
 
-	const handleChangeStatus = (user: UserDetailDto) => {
+	const handleChangeStatus = (user: UserDto) => {
 		setSelectedUser(user);
 		setNewStatus(user.estatus);
 		setIsStatusDialogOpen(true);
@@ -111,15 +115,6 @@ export default function UsersManagementPage() {
 		updateStatusMutation.mutate({
 			userId: selectedUser.id,
 			data: { estatus: newStatus },
-		});
-	};
-
-	// Formatear fecha
-	const formatDate = (dateStr: string) => {
-		return new Date(dateStr).toLocaleDateString("es-MX", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
 		});
 	};
 
@@ -180,8 +175,8 @@ export default function UsersManagementPage() {
 										<SelectContent>
 											<SelectItem value="all">Todos</SelectItem>
 											{statuses?.map((status) => (
-												<SelectItem key={status.id_Estatus} value={status.id_Estatus.toString()}>
-													{status.nombre_Estatus}
+												<SelectItem key={status.id} value={status.id.toString()}>
+													{status.name}
 												</SelectItem>
 											))}
 										</SelectContent>
@@ -209,7 +204,7 @@ export default function UsersManagementPage() {
 												<div className="flex-1 space-y-3">
 													{/* Nombre y email */}
 													<div>
-														<h3 className="text-lg font-semibold">{user.fullName}</h3>
+														<h3 className="text-lg font-semibold">{user.nombreCompleto}</h3>
 														<p className="text-sm text-muted-foreground">{user.email}</p>
 													</div>
 
@@ -238,7 +233,7 @@ export default function UsersManagementPage() {
 														</div>
 														<div>
 															<p className="text-muted-foreground">Registro</p>
-															<p className="text-xs">{formatDate(user.fechaRegistro)}</p>
+															<p className="text-xs">{new Date(user.fechaRegistro).toLocaleDateString()}</p>
 														</div>
 													</div>
 
@@ -305,31 +300,31 @@ export default function UsersManagementPage() {
 
 								<Card>
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
-										<CardTitle className="text-sm font-medium">Nuevos Hoy</CardTitle>
-										<TrendingUp className="h-4 w-4 text-muted-foreground" />
+										<CardTitle className="text-sm font-medium">Activos</CardTitle>
+										<UserCheck className="h-4 w-4 text-muted-foreground" />
 									</CardHeader>
 									<CardContent>
-										<div className="text-2xl font-bold">{stats.newUsers.today}</div>
+										<div className="text-2xl font-bold">{stats.activeUsers}</div>
 									</CardContent>
 								</Card>
 
 								<Card>
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
-										<CardTitle className="text-sm font-medium">Esta Semana</CardTitle>
+										<CardTitle className="text-sm font-medium">Suspendidos</CardTitle>
 										<Calendar className="h-4 w-4 text-muted-foreground" />
 									</CardHeader>
 									<CardContent>
-										<div className="text-2xl font-bold">{stats.newUsers.thisWeek}</div>
+										<div className="text-2xl font-bold">{stats.suspendedUsers}</div>
 									</CardContent>
 								</Card>
 
 								<Card>
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
-										<CardTitle className="text-sm font-medium">Este Mes</CardTitle>
+										<CardTitle className="text-sm font-medium">Bloqueados</CardTitle>
 										<TrendingUp className="h-4 w-4 text-muted-foreground" />
 									</CardHeader>
 									<CardContent>
-										<div className="text-2xl font-bold">{stats.newUsers.thisMonth}</div>
+										<div className="text-2xl font-bold">{stats.lockedUsers}</div>
 									</CardContent>
 								</Card>
 							</div>
@@ -342,22 +337,13 @@ export default function UsersManagementPage() {
 								</CardHeader>
 								<CardContent>
 									<div className="space-y-4">
-										{stats.usersByStatus.map((statusStat) => (
-											<div key={statusStat.estatusId} className="space-y-2">
+										{statuses?.map((status) => (
+											<div key={status.id} className="space-y-2">
 												<div className="flex items-center justify-between text-sm">
 													<div className="flex items-center gap-2">
-														<Badge variant={STATUS_CONFIG[statusStat.estatusId]?.variant || "secondary"}>
-															{statusStat.estatusNombre}
-														</Badge>
-														<span className="text-muted-foreground">{statusStat.count} usuarios</span>
+														<Badge variant={STATUS_CONFIG[status.id]?.variant || "secondary"}>{status.name}</Badge>
+														<span className="text-muted-foreground">Ver usuarios</span>
 													</div>
-													<span className="font-medium">{statusStat.percentage.toFixed(1)}%</span>
-												</div>
-												<div className="w-full bg-secondary rounded-full h-2">
-													<div
-														className="bg-primary h-2 rounded-full transition-all"
-														style={{ width: `${statusStat.percentage}%` }}
-													/>
 												</div>
 											</div>
 										))}
@@ -379,7 +365,7 @@ export default function UsersManagementPage() {
 					<DialogHeader>
 						<DialogTitle>Cambiar Estatus de Usuario</DialogTitle>
 						<DialogDescription>
-							Usuario: {selectedUser?.fullName} ({selectedUser?.email})
+							Usuario: {selectedUser?.nombreCompleto} ({selectedUser?.email})
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -399,8 +385,8 @@ export default function UsersManagementPage() {
 								</SelectTrigger>
 								<SelectContent>
 									{statuses?.map((status) => (
-										<SelectItem key={status.id_Estatus} value={status.id_Estatus.toString()}>
-											{status.nombre_Estatus}
+										<SelectItem key={status.id} value={status.id.toString()}>
+											{status.name}
 										</SelectItem>
 									))}
 								</SelectContent>
