@@ -15,11 +15,11 @@ import { handleApiError } from "@/utils/error-handler";
 
 /**
  * Mapping de estatus a colores y variantes de badge
+ * IDs reales de la BD: 1=Activo, 2=Inactivo, 3=Bloqueado
  */
 const STATUS_CONFIG: Record<number, { variant: any; label: string; color: string }> = {
-	0: { variant: "default", label: "Activo", color: "text-green-600" },
-	1: { variant: "secondary", label: "Inactivo", color: "text-gray-600" },
-	2: { variant: "destructive", label: "Suspendido", color: "text-orange-600" },
+	1: { variant: "default", label: "Activo", color: "text-green-600" },
+	2: { variant: "secondary", label: "Inactivo", color: "text-gray-600" },
 	3: { variant: "destructive", label: "Bloqueado", color: "text-red-600" },
 };
 
@@ -35,13 +35,8 @@ export default function UsersManagementPage() {
 	const { data: users = [], isLoading: usersLoading } = useQuery({
 		queryKey: ["users"],
 		queryFn: async () => {
-			const [active, inactive, suspended, blocked] = await Promise.all([
-				userService.getUsersByStatus(UserStatus.Activo),
-				userService.getUsersByStatus(UserStatus.Inactivo),
-				userService.getUsersByStatus(UserStatus.Suspendido),
-				userService.getUsersByStatus(UserStatus.Bloqueado),
-			]);
-			return [...active, ...inactive, ...suspended, ...blocked];
+			// Usar getAllUsers en lugar de múltiples llamadas
+			return await userService.getAllUsers();
 		},
 		retry: 1,
 	});
@@ -310,11 +305,11 @@ export default function UsersManagementPage() {
 
 								<Card>
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
-										<CardTitle className="text-sm font-medium">Suspendidos</CardTitle>
+										<CardTitle className="text-sm font-medium">Inactivos</CardTitle>
 										<Calendar className="h-4 w-4 text-muted-foreground" />
 									</CardHeader>
 									<CardContent>
-										<div className="text-2xl font-bold">{stats.suspendedUsers}</div>
+										<div className="text-2xl font-bold">{stats.inactiveUsers || 0}</div>
 									</CardContent>
 								</Card>
 
