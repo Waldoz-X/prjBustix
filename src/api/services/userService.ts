@@ -4,9 +4,8 @@
  */
 
 export enum UserStatus {
-	Activo = 0,
-	Inactivo = 1,
-	Suspendido = 2,
+	Activo = 1,
+	Inactivo = 2,
 	Bloqueado = 3,
 }
 
@@ -75,6 +74,17 @@ export interface LockoutInfoDto {
 	isLockedOut: boolean;
 	lockoutEnd?: string;
 	accessFailedCount: number;
+}
+
+export interface UsersAtRiskDto {
+	totalUsersAtRisk: number;
+	usersAtRisk: Array<{
+		userId: string;
+		email: string;
+		nombreCompleto: string;
+		accessFailedCount: number;
+		lastFailedAttempt?: string;
+	}>;
 }
 
 const BASE_URL = "http://localhost:5289/api/Account";
@@ -193,16 +203,51 @@ const confirmEmail = async (email: string, token: string): Promise<{ message?: s
 };
 
 /**
+ * Obtener todos los usuarios (sin filtro de estatus)
+ */
+const getAllUsers = async (): Promise<UserDto[]> => {
+	console.log(`[UserService] Fetching all users from ${BASE_URL}`);
+
+	const response = await fetch(`${BASE_URL}`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	console.log(`[UserService] Response status: ${response.status}`);
+
+	const data = await handleResponse(response);
+	console.log(`[UserService] Data received:`, data);
+	console.log(`[UserService] Is array:`, Array.isArray(data));
+	console.log(`[UserService] Array length:`, Array.isArray(data) ? data.length : "N/A");
+
+	const result = Array.isArray(data) ? data : [];
+	console.log(`[UserService] Returning: ${result.length} users`);
+
+	return result;
+};
+
+/**
  * Obtener todos los usuarios por estatus
  */
 const getUsersByStatus = async (estatusId: number): Promise<UserDto[]> => {
+	console.log(`[UserService] Fetching users by status: ${estatusId} from ${BASE_URL}/users/by-status/${estatusId}`);
+
 	const response = await fetch(`${BASE_URL}/users/by-status/${estatusId}`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
 
+	console.log(`[UserService] Response status: ${response.status}`);
+
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+	console.log(`[UserService] Data received:`, data);
+	console.log(`[UserService] Is array:`, Array.isArray(data));
+	console.log(`[UserService] Array length:`, Array.isArray(data) ? data.length : "N/A");
+
+	const result = Array.isArray(data) ? data : [];
+	console.log(`[UserService] Returning: ${result.length} users`);
+
+	return result;
 };
 
 /**
@@ -233,12 +278,27 @@ const getStats = async (): Promise<UserStatsDto> => {
  * Obtener todos los estatus disponibles
  */
 const getStatuses = async (): Promise<Array<{ id: number; name: string }>> => {
+	console.log(`[UserService] Fetching statuses from ${BASE_URL}/statuses`);
+
 	const response = await fetch(`${BASE_URL}/statuses`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	console.log(`[UserService] Statuses received:`, data);
+
+	// La API devuelve { id_Estatus, nombre }, necesitamos mapear a { id, name }
+	if (Array.isArray(data)) {
+		const mapped = data.map((status: any) => ({
+			id: status.id_Estatus,
+			name: status.nombre,
+		}));
+		console.log(`[UserService] Mapped statuses:`, mapped);
+		return mapped;
+	}
+
+	return [];
 };
 
 /**
@@ -332,13 +392,22 @@ const resetFailedAttempts = async (userId: string): Promise<void> => {
  * Obtener usuarios bloqueados
  */
 const getLockedUsers = async (): Promise<UserDto[]> => {
+	console.log(`[UserService] Fetching locked users from ${BASE_URL}/locked-users`);
+
 	const response = await fetch(`${BASE_URL}/locked-users`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
 
+	console.log(`[UserService] Response status: ${response.status}`);
+
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+	console.log(`[UserService] Locked users data:`, data);
+
+	const result = Array.isArray(data) ? data : [];
+	console.log(`[UserService] Returning: ${result.length} locked users`);
+
+	return result;
 };
 
 /**
@@ -353,11 +422,88 @@ const getLockoutInfo = async (userId: string): Promise<LockoutInfoDto> => {
 	return await handleResponse(response);
 };
 
+/**
+ * Obtener usuarios en riesgo (con múltiples intentos fallidos)
+ */
+const getUsersAtRisk = async (): Promise<UsersAtRiskDto> => {
+	console.log(`[UserService] Fetching users at risk from ${BASE_URL}/users-at-risk`);
+
+	const response = await fetch(`${BASE_URL}/users-at-risk`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	console.log(`[UserService] Response status: ${response.status}`);
+
+	const data = await handleResponse(response);
+	console.log(`[UserService] Users at risk:`, data);
+
+	return data;
+};
+
+/**
+ * Confirmar email directamente (admin action)
+ * Usa el endpoint admin que NO requiere token de confirmación
+ */
+const confirmEmailDirect = async (email: string, nota?: string): Promise<{ message?: string; isSuccess: boolean }> => {
+	console.log(`[UserService] Admin confirming email for: ${email}`);
+
+	try {
+		const response = await fetch(`${BASE_URL}/admin/confirm-email`, {
+			method: "POST",
+			headers: getHeaders(),
+			body: JSON.stringify({
+				email: email,
+				nota: nota || "Verificado manualmente por administrador",
+			}),
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error(`[UserService] ERROR: admin/confirm-email failed with status ${response.status}:`, errorText);
+			throw new Error(`Error ${response.status}: ${errorText || "No se pudo verificar el email"}`);
+		}
+
+		const data = await handleResponse(response);
+		console.log(`[UserService] Email confirmation result:`, data);
+
+		return data || { isSuccess: true, message: "Email verificado correctamente" };
+	} catch (error) {
+		console.error(`[UserService] ERROR: Error confirming email:`, error);
+		throw error;
+	}
+};
+
+/**
+ * Reenviar email de confirmación (admin action)
+ * Usa el endpoint admin que permite agregar una nota
+ */
+const resendConfirmationEmail = async (email: string, nota?: string): Promise<{ message?: string }> => {
+	console.log(`[UserService] Admin resending confirmation email to: ${email}`);
+
+	const response = await fetch(`${BASE_URL}/admin/resend-confirmation`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify({
+			email,
+			nota: nota || "Email de confirmación reenviado por administrador",
+		}),
+	});
+
+	const data = await handleResponse(response);
+	console.log(`[UserService] Resend result:`, data);
+
+	return data;
+};
+
 const userService = {
 	login,
 	logout,
 	register,
 	confirmEmail,
+	confirmEmailDirect,
+	resendConfirmationEmail,
+	getAllUsers,
 	getUsersByStatus,
 	getUserById,
 	getStats,
@@ -371,6 +517,7 @@ const userService = {
 	resetFailedAttempts,
 	getLockedUsers,
 	getLockoutInfo,
+	getUsersAtRisk,
 };
 
 export default userService;

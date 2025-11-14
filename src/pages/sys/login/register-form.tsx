@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Loader2, Mail, ShieldCheck, User } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import type { RegisterDto } from "@/types/user";
 import { Button } from "@/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
+import { Progress } from "@/ui/progress";
 import { cn } from "@/utils";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 import { logger } from "@/utils/logger";
@@ -17,6 +18,8 @@ function RegisterForm() {
 	const { t } = useTranslation();
 	const { loginState, backToLogin, setLoginState } = useLoginStateContext();
 	const [loading, setLoading] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const signUpMutation = useMutation<{ message?: string }, Error, RegisterDto>({
 		mutationFn: userService.register,
@@ -58,6 +61,22 @@ function RegisterForm() {
 			roles: ["User"], // Por defecto User
 		},
 	});
+
+	// Requisitos de contraseña
+	const password = form.watch("password") || "";
+	const confirmPassword = form.watch("confirmPassword" as any) || "";
+
+	const passwordRequirements = [
+		{ label: "Mínimo 8 caracteres", test: (p: string) => p.length >= 8 },
+		{ label: "Una mayúscula (A-Z)", test: (p: string) => /[A-Z]/.test(p) },
+		{ label: "Una minúscula (a-z)", test: (p: string) => /[a-z]/.test(p) },
+		{ label: "Un número (0-9)", test: (p: string) => /\d/.test(p) },
+		{ label: "Un símbolo (@#$%)", test: (p: string) => /[@$!%*?&#]/.test(p) },
+	];
+
+	const passedCount = passwordRequirements.filter((r) => r.test(password)).length;
+	const passwordStrength = (passedCount / passwordRequirements.length) * 100;
+	const passwordsMatch = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
 
 	const onFinish = async (values: RegisterDto) => {
 		logger.debug("RegisterForm values:", values);
@@ -101,9 +120,15 @@ function RegisterForm() {
 						}}
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Email</FormLabel>
+								<FormLabel className="flex items-center gap-2">
+									<Mail className="h-4 w-4 text-primary" />
+									Email
+								</FormLabel>
 								<FormControl>
-									<Input type="email" placeholder="tu-email@example.com" {...field} />
+									<div className="relative">
+										<Input type="email" placeholder="tu-email@example.com" className="pl-10" {...field} />
+										<Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+									</div>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -123,9 +148,15 @@ function RegisterForm() {
 						}}
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Nombre Completo</FormLabel>
+								<FormLabel className="flex items-center gap-2">
+									<User className="h-4 w-4 text-primary" />
+									Nombre Completo
+								</FormLabel>
 								<FormControl>
-									<Input placeholder="Juan Pérez García" {...field} />
+									<div className="relative">
+										<Input placeholder="Juan Pérez García" className="pl-10" {...field} />
+										<User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+									</div>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -149,14 +180,77 @@ function RegisterForm() {
 						}}
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Contraseña</FormLabel>
+								<FormLabel className="flex items-center gap-2">
+									<ShieldCheck className="h-4 w-4 text-primary" />
+									Contraseña
+								</FormLabel>
 								<FormControl>
-									<Input type="password" placeholder="********" {...field} />
+									<div className="relative">
+										<Input
+											type={showPassword ? "text" : "password"}
+											placeholder="********"
+											className="pr-10"
+											{...field}
+										/>
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+											onClick={() => setShowPassword(!showPassword)}
+										>
+											{showPassword ? (
+												<EyeOff className="h-4 w-4 text-muted-foreground" />
+											) : (
+												<Eye className="h-4 w-4 text-muted-foreground" />
+											)}
+										</Button>
+									</div>
 								</FormControl>
+
+								{/* Barra de progreso de fuerza */}
+								{password && (
+									<div className="space-y-2 mt-2">
+										<div className="flex items-center gap-2">
+											<Progress
+												value={passwordStrength}
+												className={cn(
+													"h-2",
+													passwordStrength < 40 && "[&>div]:bg-red-500",
+													passwordStrength >= 40 && passwordStrength < 80 && "[&>div]:bg-yellow-500",
+													passwordStrength >= 80 && "[&>div]:bg-green-500",
+												)}
+											/>
+											<span className="text-xs text-muted-foreground whitespace-nowrap">
+												{passwordStrength < 40 && "Débil"}
+												{passwordStrength >= 40 && passwordStrength < 80 && "Media"}
+												{passwordStrength >= 80 && "Fuerte"}
+											</span>
+										</div>
+
+										{/* Requisitos */}
+										<div className="grid grid-cols-1 gap-1">
+											{passwordRequirements.map((req) => {
+												const passed = req.test(password);
+												return (
+													<div key={req.label} className="flex items-center gap-2 text-xs">
+														{passed ? (
+															<CheckCircle2 className="h-3 w-3 text-green-600" />
+														) : (
+															<div className="h-3 w-3 rounded-full border border-muted-foreground" />
+														)}
+														<span
+															className={cn("transition-colors", passed ? "text-green-600" : "text-muted-foreground")}
+														>
+															{req.label}
+														</span>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								)}
 								<FormMessage />
-								<p className="text-xs text-muted-foreground">
-									Incluye mayúscula, minúscula, número y símbolo (@, #, $, %)
-								</p>
 							</FormItem>
 						)}
 					/>
@@ -171,19 +265,68 @@ function RegisterForm() {
 						}}
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Confirmar Contraseña</FormLabel>
+								<FormLabel className="flex items-center gap-2">
+									<ShieldCheck className="h-4 w-4 text-primary" />
+									Confirmar Contraseña
+								</FormLabel>
 								<FormControl>
-									<Input type="password" placeholder="********" {...field} />
+									<div className="relative">
+										<Input
+											type={showConfirmPassword ? "text" : "password"}
+											placeholder="********"
+											className="pr-10"
+											{...field}
+										/>
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+											onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+										>
+											{showConfirmPassword ? (
+												<EyeOff className="h-4 w-4 text-muted-foreground" />
+											) : (
+												<Eye className="h-4 w-4 text-muted-foreground" />
+											)}
+										</Button>
+									</div>
 								</FormControl>
+
+								{/* Indicador de coincidencia */}
+								{confirmPassword && (
+									<div className="flex items-center gap-2 mt-2">
+										{passwordsMatch ? (
+											<>
+												<CheckCircle2 className="h-4 w-4 text-green-600" />
+												<span className="text-xs text-green-600">Las contraseñas coinciden</span>
+											</>
+										) : (
+											<>
+												<div className="h-4 w-4 rounded-full border-2 border-red-500" />
+												<span className="text-xs text-red-600">Las contraseñas no coinciden</span>
+											</>
+										)}
+									</div>
+								)}
 								<FormMessage />
 							</FormItem>
 						)}
 					/>
 
 					{/* Botón de Registro */}
-					<Button type="submit" className="w-full" disabled={loading}>
-						{loading && <Loader2 className="animate-spin mr-2" />}
-						{t("sys.login.registerButton")}
+					<Button type="submit" className="w-full" disabled={loading || !passwordsMatch || passwordStrength < 80}>
+						{loading ? (
+							<>
+								<Loader2 className="animate-spin mr-2 h-4 w-4" />
+								Creando cuenta...
+							</>
+						) : (
+							<>
+								<CheckCircle2 className="mr-2 h-4 w-4" />
+								{t("sys.login.registerButton")}
+							</>
+						)}
 					</Button>
 
 					{/* Términos y Condiciones */}
@@ -194,7 +337,6 @@ function RegisterForm() {
 							className="h-auto p-0 text-xs"
 							onClick={(e) => {
 								e.preventDefault();
-								// Aquí podrías abrir un modal con los términos
 							}}
 						>
 							Términos de Servicio
@@ -205,7 +347,6 @@ function RegisterForm() {
 							className="h-auto p-0 text-xs"
 							onClick={(e) => {
 								e.preventDefault();
-								// Aquí podrías abrir un modal con la política
 							}}
 						>
 							Política de Privacidad

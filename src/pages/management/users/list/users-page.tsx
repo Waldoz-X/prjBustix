@@ -3,20 +3,23 @@ import {
 	BadgeCheck,
 	BadgeX,
 	Check,
+	Edit,
+	Eye,
+	EyeOff,
+	Info,
 	Loader2,
 	Lock,
 	LockKeyhole,
+	Mail,
 	Plus,
 	RefreshCw,
-	ShieldAlert,
+	Send,
+	ShieldCheck,
 	Unlock,
 	User,
 	UserCog,
 	Users,
-	Eye,
-	EyeOff,
-	Edit,
-	Info,
+	X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -47,7 +50,7 @@ import { Progress } from "@/ui/progress";
 import { handleApiError } from "@/utils/error-handler";
 
 /**
- * Mapeo de estatus a colores
+ * Mapeo de estatus a colores (IDs reales de la BD)
  */
 const STATUS_CONFIG = {
 	[UserStatus.Activo]: {
@@ -61,12 +64,6 @@ const STATUS_CONFIG = {
 		variant: "secondary" as const,
 		icon: User,
 		color: "text-gray-600",
-	},
-	[UserStatus.Suspendido]: {
-		label: "Suspendido",
-		variant: "destructive" as const,
-		icon: ShieldAlert,
-		color: "text-orange-600",
 	},
 	[UserStatus.Bloqueado]: {
 		label: "Bloqueado",
@@ -133,41 +130,84 @@ export default function UsersPage() {
 	const availableRoles: RoleDto[] = rolesResponse?.data ?? [];
 
 	// Query para obtener estadísticas
-	const { data: stats, isLoading: statsLoading } = useQuery({
+	const { data: stats } = useQuery({
 		queryKey: ["user-stats"],
 		queryFn: () => userService.getStats(),
 	});
 
 	// Query para obtener usuarios según el tab activo
-	const { data: users = [], isLoading: usersLoading } = useQuery({
+	const {
+		data: users = [],
+		isLoading: usersLoading,
+		error: usersError,
+		refetch: refetchUsers,
+	} = useQuery({
 		queryKey: ["users", activeTab],
 		queryFn: async () => {
-			if (activeTab === "all") {
-				// Obtener todos los usuarios combinando todas las categorías
-				const [active, inactive, suspended, blocked] = await Promise.all([
-					userService.getUsersByStatus(UserStatus.Activo),
-					userService.getUsersByStatus(UserStatus.Inactivo),
-					userService.getUsersByStatus(UserStatus.Suspendido),
-					userService.getUsersByStatus(UserStatus.Bloqueado),
-				]);
-				return [...active, ...inactive, ...suspended, ...blocked];
-			} else if (activeTab === "locked") {
-				return userService.getLockedUsers();
-			} else {
-				const statusId = Number.parseInt(activeTab);
-				return userService.getUsersByStatus(statusId);
+			console.log("[UsersPage] Fetching users for tab:", activeTab);
+
+			try {
+				let result: UserDto[] = [];
+
+				if (activeTab === "all") {
+					// Usar la nueva función que obtiene todos los usuarios correctamente
+					result = await userService.getAllUsers();
+					console.log("[UsersPage] All users fetched:", result.length, result);
+				} else if (activeTab === "locked") {
+					result = await userService.getLockedUsers();
+					console.log("[UsersPage] Locked users fetched:", result.length, result);
+				} else {
+					const statusId = Number.parseInt(activeTab);
+					result = await userService.getUsersByStatus(statusId);
+					console.log(`[UsersPage] Users with status ${statusId} fetched:`, result.length, result);
+				}
+
+				return result;
+			} catch (error) {
+				console.error("[UsersPage] ERROR: Error fetching users:", error);
+				throw error;
 			}
 		},
+		staleTime: 0, // Siempre refrescar
+		retry: 2,
+	});
+
+	// Log para depuración
+	console.log("[UsersPage] Current users:", users);
+	console.log("[UsersPage] Current stats:", stats);
+	console.log("[UsersPage] Active tab:", activeTab);
+
+	// Calcular estadísticas localmente desde los usuarios cargados
+	const localStats = {
+		totalUsers: users?.length || 0,
+		activeUsers: users?.filter((u) => u.estatus === UserStatus.Activo).length || 0,
+		inactiveUsers: users?.filter((u) => u.estatus === UserStatus.Inactivo).length || 0,
+		lockedUsers: users?.filter((u) => u.estatus === UserStatus.Bloqueado).length || 0,
+	};
+
+	console.log("[UsersPage] Local calculated stats:", localStats);
+
+	// Query para obtener usuarios en riesgo
+	const { data: usersAtRisk, isLoading: usersAtRiskLoading } = useQuery({
+		queryKey: ["users-at-risk"],
+		queryFn: () => userService.getUsersAtRisk(),
+		refetchInterval: 30000, // Refrescar cada 30 segundos
 	});
 
 	// Mutation para crear usuario
 	const createMutation = useMutation({
 		mutationFn: (data: CreateUserDto) => userService.createUser(data),
 		onSuccess: () => {
+			// Invalidar todas las queries relacionadas para refrescar automáticamente
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
-			toast.success("Usuario creado", {
-				description: "El usuario se ha creado correctamente",
+			queryClient.invalidateQueries({ queryKey: ["users-at-risk"] });
+
+			// Refrescar inmediatamente los datos
+			refetchUsers();
+
+			toast.success("Usuario creado exitosamente", {
+				description: "El nuevo usuario ya aparece en la lista",
 			});
 			setIsCreateOpen(false);
 			setCreateForm({
@@ -196,6 +236,8 @@ export default function UsersPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+			queryClient.invalidateQueries({ queryKey: ["users-at-risk"] });
+			refetchUsers();
 			toast.success("Estatus actualizado", {
 				description: "El estatus del usuario se ha actualizado correctamente",
 			});
@@ -215,6 +257,9 @@ export default function UsersPage() {
 		mutationFn: ({ userId, minutes }: { userId: string; minutes: number }) => userService.lockUser(userId, minutes),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
+			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+			queryClient.invalidateQueries({ queryKey: ["users-at-risk"] });
+			refetchUsers();
 			toast.success("Usuario bloqueado", {
 				description: "El usuario ha sido bloqueado temporalmente",
 			});
@@ -234,6 +279,9 @@ export default function UsersPage() {
 		mutationFn: (userId: string) => userService.unlockUser(userId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
+			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+			queryClient.invalidateQueries({ queryKey: ["users-at-risk"] });
+			refetchUsers();
 			toast.success("Usuario desbloqueado", {
 				description: "El usuario ha sido desbloqueado correctamente",
 			});
@@ -251,6 +299,7 @@ export default function UsersPage() {
 		mutationFn: (userId: string) => userService.resetFailedAttempts(userId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
+			queryClient.invalidateQueries({ queryKey: ["users-at-risk"] });
 			toast.success("Intentos reseteados", {
 				description: "Los intentos fallidos han sido reseteados",
 			});
@@ -259,6 +308,41 @@ export default function UsersPage() {
 			const safeError = handleApiError(err);
 			toast.error("Error al resetear intentos", {
 				description: safeError.userMessage,
+			});
+		},
+	});
+
+	// Mutation para reenviar email de confirmación
+	const resendConfirmationMutation = useMutation({
+		mutationFn: (email: string) => userService.resendConfirmationEmail(email),
+		onSuccess: () => {
+			toast.success("Email de confirmación reenviado", {
+				description: "El usuario recibirá un nuevo correo con el enlace de verificación",
+			});
+		},
+		onError: (err: any) => {
+			const safeError = handleApiError(err);
+			toast.error("Error al reenviar email", {
+				description: safeError.userMessage,
+			});
+		},
+	});
+
+	// Mutation para verificar email directamente (admin)
+	const confirmEmailMutation = useMutation({
+		mutationFn: (email: string) => userService.confirmEmailDirect(email),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["users"] });
+			refetchUsers();
+			toast.success("Email verificado exitosamente", {
+				description: "El email del usuario ha sido verificado por el administrador",
+			});
+		},
+		onError: (err: any) => {
+			console.error("Error al verificar email:", err);
+			const safeError = handleApiError(err);
+			toast.error("Error al verificar email", {
+				description: safeError.userMessage || "No se pudo verificar el email. Verifica los logs para más detalles.",
 			});
 		},
 	});
@@ -273,6 +357,8 @@ export default function UsersPage() {
 		}) => userService.updateProfile(data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
+			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+			refetchUsers();
 			toast.success("Perfil actualizado", {
 				description: "Los datos del usuario se han actualizado correctamente",
 			});
@@ -610,6 +696,76 @@ export default function UsersPage() {
 				</Dialog>
 			</div>
 
+			{/* Alerta de Usuarios en Riesgo */}
+			{!usersAtRiskLoading && usersAtRisk && usersAtRisk.totalUsersAtRisk > 0 && (
+				<Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+					<CardHeader>
+						<div className="flex items-center gap-3">
+							<div className="rounded-full bg-amber-500 p-2">
+								<LockKeyhole className="h-5 w-5 text-white" />
+							</div>
+							<div className="flex-1">
+								<CardTitle className="text-lg flex items-center gap-2">
+									<span className="text-amber-700 dark:text-amber-400">Alerta de Seguridad</span>
+									<Badge variant="destructive" className="animate-pulse">
+										{usersAtRisk.totalUsersAtRisk}
+									</Badge>
+								</CardTitle>
+								<CardDescription className="text-amber-600 dark:text-amber-500">
+									{usersAtRisk.totalUsersAtRisk === 1
+										? "Hay 1 usuario con múltiples intentos fallidos de inicio de sesión"
+										: `Hay ${usersAtRisk.totalUsersAtRisk} usuarios con múltiples intentos fallidos de inicio de sesión`}
+								</CardDescription>
+							</div>
+						</div>
+					</CardHeader>
+					<CardContent>
+						<div className="space-y-2">
+							{usersAtRisk.usersAtRisk.slice(0, 3).map((user) => (
+								<div
+									key={user.userId}
+									className="flex items-center justify-between p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-amber-950/30"
+								>
+									<div className="flex items-center gap-3">
+										<div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
+											<User className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+										</div>
+										<div>
+											<p className="text-sm font-medium text-amber-900 dark:text-amber-100">{user.nombreCompleto}</p>
+											<p className="text-xs text-amber-600 dark:text-amber-500">{user.email}</p>
+										</div>
+									</div>
+									<div className="flex items-center gap-3">
+										<Badge variant="destructive" className="flex items-center gap-1">
+											<LockKeyhole className="h-3 w-3" />
+											{user.accessFailedCount} intentos
+										</Badge>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => {
+												const userToReset = users.find((u) => u.id === user.userId);
+												if (userToReset) {
+													resetAttemptsMutation.mutate(user.userId);
+												}
+											}}
+										>
+											<RefreshCw className="h-3 w-3 mr-1" />
+											Resetear
+										</Button>
+									</div>
+								</div>
+							))}
+							{usersAtRisk.totalUsersAtRisk > 3 && (
+								<p className="text-xs text-center text-amber-600 dark:text-amber-500 pt-2">
+									Y {usersAtRisk.totalUsersAtRisk - 3} usuario(s) más en riesgo...
+								</p>
+							)}
+						</div>
+					</CardContent>
+				</Card>
+			)}
+
 			{/* Estadísticas */}
 			<div className="grid gap-4 md:grid-cols-4">
 				<Card>
@@ -618,10 +774,10 @@ export default function UsersPage() {
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						{statsLoading ? (
+						{usersLoading ? (
 							<Loader2 className="h-6 w-6 animate-spin text-primary" />
 						) : (
-							<div className="text-2xl font-bold">{stats?.totalUsers ?? 0}</div>
+							<div className="text-2xl font-bold">{localStats.totalUsers}</div>
 						)}
 					</CardContent>
 				</Card>
@@ -632,24 +788,24 @@ export default function UsersPage() {
 						<BadgeCheck className="h-4 w-4 text-green-600" />
 					</CardHeader>
 					<CardContent>
-						{statsLoading ? (
+						{usersLoading ? (
 							<Loader2 className="h-6 w-6 animate-spin text-primary" />
 						) : (
-							<div className="text-2xl font-bold text-green-600">{stats?.activeUsers ?? 0}</div>
+							<div className="text-2xl font-bold text-green-600">{localStats.activeUsers}</div>
 						)}
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Suspendidos</CardTitle>
-						<ShieldAlert className="h-4 w-4 text-orange-600" />
+						<CardTitle className="text-sm font-medium">Inactivos</CardTitle>
+						<User className="h-4 w-4 text-gray-600" />
 					</CardHeader>
 					<CardContent>
-						{statsLoading ? (
+						{usersLoading ? (
 							<Loader2 className="h-6 w-6 animate-spin text-primary" />
 						) : (
-							<div className="text-2xl font-bold text-orange-600">{stats?.suspendedUsers ?? 0}</div>
+							<div className="text-2xl font-bold text-gray-600">{localStats.inactiveUsers}</div>
 						)}
 					</CardContent>
 				</Card>
@@ -660,10 +816,10 @@ export default function UsersPage() {
 						<Lock className="h-4 w-4 text-red-600" />
 					</CardHeader>
 					<CardContent>
-						{statsLoading ? (
+						{usersLoading ? (
 							<Loader2 className="h-6 w-6 animate-spin text-primary" />
 						) : (
-							<div className="text-2xl font-bold text-red-600">{stats?.lockedUsers ?? 0}</div>
+							<div className="text-2xl font-bold text-red-600">{localStats.lockedUsers}</div>
 						)}
 					</CardContent>
 				</Card>
@@ -696,12 +852,6 @@ export default function UsersPage() {
 										<div className="flex items-center gap-2">
 											<User className="h-4 w-4 text-gray-600" />
 											Inactivo
-										</div>
-									</SelectItem>
-									<SelectItem value={UserStatus.Suspendido.toString()}>
-										<div className="flex items-center gap-2">
-											<ShieldAlert className="h-4 w-4 text-orange-600" />
-											Suspendido
 										</div>
 									</SelectItem>
 									<SelectItem value={UserStatus.Bloqueado.toString()}>
@@ -831,92 +981,206 @@ export default function UsersPage() {
 
 			{/* Diálogo para ver detalles de usuario */}
 			<Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-				<DialogContent className="max-w-2xl">
+				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Detalles del Usuario</DialogTitle>
-						<DialogDescription>Información detallada sobre el usuario</DialogDescription>
+						<DialogTitle className="flex items-center gap-2">
+							<Info className="h-5 w-5" />
+							Detalles del Usuario
+						</DialogTitle>
+						<DialogDescription>Información completa y detallada del usuario</DialogDescription>
 					</DialogHeader>
-					<div className="space-y-4 py-4">
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label>Nombre Completo</Label>
-								<p className="text-sm">{userDetails?.nombreCompleto}</p>
-							</div>
-							<div className="space-y-2">
-								<Label>Email</Label>
-								<p className="text-sm">{userDetails?.email}</p>
-							</div>
-						</div>
 
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label>Teléfono</Label>
-								<p className="text-sm">{userDetails?.phoneNumber || "No disponible"}</p>
+					<div className="space-y-6 py-4">
+						{/* Información Personal */}
+						<div className="space-y-4">
+							<div className="flex items-center gap-2 text-sm font-semibold text-primary">
+								<User className="h-4 w-4" />
+								Información Personal
 							</div>
-							<div className="space-y-2">
-								<Label>Tipo de Documento</Label>
-								<p className="text-sm">{userDetails?.tipoDocumento || "No disponible"}</p>
-							</div>
-						</div>
-
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label>Número de Documento</Label>
-								<p className="text-sm">{userDetails?.numeroDocumento || "No disponible"}</p>
-							</div>
-							<div className="space-y-2">
-								<Label>Estatus</Label>
-								{userDetails && (
-									<Badge variant={STATUS_CONFIG[userDetails.estatus].variant} className="flex items-center gap-1">
-										{(() => {
-											const StatusIcon = STATUS_CONFIG[userDetails.estatus].icon;
-											return <StatusIcon className="h-3 w-3" />;
-										})()}
-										{STATUS_CONFIG[userDetails.estatus].label}
-									</Badge>
-								)}
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label>Roles</Label>
-							<div className="flex gap-1 flex-wrap">
-								{userDetails && userDetails.roles && userDetails.roles.length > 0 ? (
-									userDetails.roles.map((role) => (
-										<Badge key={role} variant="secondary" className="text-xs">
-											{role}
-										</Badge>
-									))
-								) : (
-									<span className="text-xs text-muted-foreground">Sin roles</span>
-								)}
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label>Información de Bloqueo</Label>
-							{lockoutInfo ? (
-								<div className="p-4 border rounded-lg">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Nombre Completo</Label>
+									<p className="text-sm font-medium break-words">{userDetails?.nombreCompleto || "No disponible"}</p>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Correo Electrónico</Label>
+									<p className="text-sm font-medium break-all">{userDetails?.email || "No disponible"}</p>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Teléfono</Label>
+									<p className="text-sm">{userDetails?.phoneNumber || "No disponible"}</p>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Fecha de Registro</Label>
 									<p className="text-sm">
-										<strong>Bloqueado por:</strong> {lockoutInfo.bloqueadoPor}
-									</p>
-									<p className="text-sm">
-										<strong>Razón:</strong> {lockoutInfo.razon}
-									</p>
-									<p className="text-sm">
-										<strong>Fecha de Bloqueo:</strong> {new Date(lockoutInfo.fechaBloqueo).toLocaleString()}
-									</p>
-									<p className="text-sm">
-										<strong>Duración:</strong> {lockoutInfo.duracion} minutos
+										{userDetails?.fechaRegistro
+											? new Date(userDetails.fechaRegistro).toLocaleDateString("es-MX", {
+													year: "numeric",
+													month: "long",
+													day: "numeric",
+													hour: "2-digit",
+													minute: "2-digit",
+												})
+											: "No disponible"}
 									</p>
 								</div>
-							) : (
-								<p className="text-sm text-muted-foreground">El usuario no está bloqueado actualmente</p>
-							)}
+							</div>
 						</div>
+
+						<div className="border-t pt-4" />
+
+						{/* Documentación */}
+						<div className="space-y-4">
+							<div className="flex items-center gap-2 text-sm font-semibold text-primary">
+								<BadgeCheck className="h-4 w-4" />
+								Documentación
+							</div>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Tipo de Documento</Label>
+									<p className="text-sm">{userDetails?.tipoDocumento || "No especificado"}</p>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Número de Documento</Label>
+									<p className="text-sm font-mono">{userDetails?.numeroDocumento || "No especificado"}</p>
+								</div>
+							</div>
+						</div>
+
+						<div className="border-t pt-4" />
+
+						{/* Estado y Permisos */}
+						<div className="space-y-4">
+							<div className="flex items-center gap-2 text-sm font-semibold text-primary">
+								<ShieldCheck className="h-4 w-4" />
+								Estado y Permisos
+							</div>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Estatus Actual</Label>
+									{userDetails && STATUS_CONFIG[userDetails.estatus] && (
+										<Badge
+											variant={STATUS_CONFIG[userDetails.estatus].variant}
+											className="flex items-center gap-1 w-fit"
+										>
+											{(() => {
+												const StatusIcon = STATUS_CONFIG[userDetails.estatus].icon;
+												return <StatusIcon className="h-3 w-3" />;
+											})()}
+											{STATUS_CONFIG[userDetails.estatus].label}
+										</Badge>
+									)}
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Email Verificado</Label>
+									<div className="flex items-center gap-2">
+										{userDetails?.emailConfirmed ? (
+											<>
+												<BadgeCheck className="h-4 w-4 text-green-600" />
+												<span className="text-sm text-green-600">Verificado</span>
+											</>
+										) : (
+											<>
+												<BadgeX className="h-4 w-4 text-amber-600" />
+												<span className="text-sm text-amber-600">Pendiente</span>
+											</>
+										)}
+									</div>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Teléfono Confirmado</Label>
+									<div className="flex items-center gap-2">
+										{userDetails?.phoneNumberConfirmed ? (
+											<>
+												<BadgeCheck className="h-4 w-4 text-green-600" />
+												<span className="text-sm text-green-600">Confirmado</span>
+											</>
+										) : (
+											<>
+												<BadgeX className="h-4 w-4 text-gray-400" />
+												<span className="text-sm text-gray-600">No confirmado</span>
+											</>
+										)}
+									</div>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-xs text-muted-foreground">Intentos Fallidos</Label>
+									<div className="flex items-center gap-2">
+										{userDetails?.accessFailedCount && userDetails.accessFailedCount > 0 ? (
+											<Badge variant="destructive">{userDetails.accessFailedCount}</Badge>
+										) : (
+											<span className="text-sm text-muted-foreground">0</span>
+										)}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div className="border-t pt-4" />
+
+						{/* Roles */}
+						<div className="space-y-4">
+							<div className="flex items-center gap-2 text-sm font-semibold text-primary">
+								<ShieldCheck className="h-4 w-4" />
+								Roles Asignados
+							</div>
+							<div className="pl-6">
+								<div className="flex gap-2 flex-wrap">
+									{userDetails && userDetails.roles && userDetails.roles.length > 0 ? (
+										userDetails.roles.map((role) => (
+											<Badge key={role} variant="secondary" className="text-xs">
+												<ShieldCheck className="h-3 w-3 mr-1" />
+												{role}
+											</Badge>
+										))
+									) : (
+										<span className="text-sm text-muted-foreground">No tiene roles asignados</span>
+									)}
+								</div>
+							</div>
+						</div>
+
+						{/* Información de Bloqueo (si aplica) */}
+						{lockoutInfo && lockoutInfo.isLockedOut && (
+							<>
+								<div className="border-t pt-4" />
+								<div className="space-y-4">
+									<div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+										<Lock className="h-4 w-4" />
+										Información de Bloqueo
+									</div>
+									<div className="pl-6">
+										<div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 space-y-3">
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+												<div>
+													<Label className="text-xs text-muted-foreground">Fin del Bloqueo</Label>
+													<p className="text-sm font-medium">
+														{lockoutInfo.lockoutEnd
+															? new Date(lockoutInfo.lockoutEnd).toLocaleString("es-MX", {
+																	year: "numeric",
+																	month: "short",
+																	day: "numeric",
+																	hour: "2-digit",
+																	minute: "2-digit",
+																})
+															: "Permanente"}
+													</p>
+												</div>
+												<div>
+													<Label className="text-xs text-muted-foreground">Intentos Fallidos</Label>
+													<p className="text-sm font-medium">{lockoutInfo.accessFailedCount}</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</>
+						)}
 					</div>
+
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+							<X className="mr-2 h-4 w-4" />
 							Cerrar
 						</Button>
 					</DialogFooter>
@@ -938,13 +1202,13 @@ export default function UsersPage() {
 						<User className="mr-2 h-4 w-4" />
 						Inactivos
 					</TabsTrigger>
-					<TabsTrigger value={UserStatus.Suspendido.toString()}>
-						<ShieldAlert className="mr-2 h-4 w-4" />
-						Suspendidos
+					<TabsTrigger value={UserStatus.Bloqueado.toString()}>
+						<Lock className="mr-2 h-4 w-4" />
+						Bloqueados
 					</TabsTrigger>
 					<TabsTrigger value="locked">
 						<Lock className="mr-2 h-4 w-4" />
-						Bloqueados
+						Bloqueados Temp
 					</TabsTrigger>
 				</TabsList>
 
@@ -1065,6 +1329,43 @@ export default function UsersPage() {
 														Desbloquear
 													</Button>
 												)}
+
+												{/* Botones de verificación de email */}
+												{!user.emailConfirmed && (
+													<>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => resendConfirmationMutation.mutate(user.email)}
+															disabled={resendConfirmationMutation.isPending}
+															className="flex-1"
+															title="Reenviar email de confirmación al usuario"
+														>
+															{resendConfirmationMutation.isPending ? (
+																<Loader2 className="mr-1 h-3 w-3 animate-spin" />
+															) : (
+																<Send className="mr-1 h-3 w-3" />
+															)}
+															Reenviar
+														</Button>
+														<Button
+															variant="default"
+															size="sm"
+															onClick={() => confirmEmailMutation.mutate(user.email)}
+															disabled={confirmEmailMutation.isPending}
+															className="flex-1 bg-green-600 hover:bg-green-700"
+															title="Verificar email manualmente (admin)"
+														>
+															{confirmEmailMutation.isPending ? (
+																<Loader2 className="mr-1 h-3 w-3 animate-spin" />
+															) : (
+																<Mail className="mr-1 h-3 w-3" />
+															)}
+															Verificar
+														</Button>
+													</>
+												)}
+
 												<Button variant="outline" size="sm" onClick={() => handleEditUser(user)} className="flex-1">
 													<Edit className="mr-1 h-3 w-3" />
 													Editar
@@ -1081,14 +1382,34 @@ export default function UsersPage() {
 						</div>
 					) : (
 						<Card>
-							<CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center">
+							<CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center space-y-4">
 								<Users className="h-12 w-12 text-muted-foreground mb-4" />
 								<h3 className="text-lg font-semibold mb-2">No hay usuarios en esta categoría</h3>
-								<p className="text-muted-foreground mb-4">Intenta con otra pestaña o crea un nuevo usuario</p>
-								<Button onClick={() => setIsCreateOpen(true)}>
-									<Plus className="mr-2 h-4 w-4" />
-									Crear Usuario
-								</Button>
+
+								{/* Información de depuración */}
+								<div className="text-xs text-muted-foreground space-y-1">
+									<p>
+										Tab activo: <span className="font-mono font-bold">{activeTab}</span>
+									</p>
+									<p>
+										Total en array: <span className="font-mono font-bold">{users?.length || 0}</span>
+									</p>
+									<p>
+										Stats total: <span className="font-mono font-bold">{stats?.totalUsers || 0}</span>
+									</p>
+									{usersError && <p className="text-red-600">Error: {(usersError as any).message}</p>}
+								</div>
+
+								<div className="flex gap-2">
+									<Button onClick={() => refetchUsers()} variant="outline">
+										<RefreshCw className="mr-2 h-4 w-4" />
+										Recargar
+									</Button>
+									<Button onClick={() => setIsCreateOpen(true)}>
+										<Plus className="mr-2 h-4 w-4" />
+										Crear Usuario
+									</Button>
+								</div>
 							</CardContent>
 						</Card>
 					)}
