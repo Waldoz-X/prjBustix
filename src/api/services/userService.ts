@@ -87,7 +87,7 @@ export interface UsersAtRiskDto {
 	}>;
 }
 
-const BASE_URL = "http://localhost:5289/api/Account";
+const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Account";
 
 /**
  * Obtiene el token del localStorage
@@ -448,8 +448,9 @@ const getUsersAtRisk = async (): Promise<UsersAtRiskDto> => {
 const confirmEmailDirect = async (email: string, nota?: string): Promise<{ message?: string; isSuccess: boolean }> => {
 	console.log(`[UserService] Admin confirming email for: ${email}`);
 
+	let response: Response | undefined;
 	try {
-		const response = await fetch(`${BASE_URL}/admin/confirm-email`, {
+		response = await fetch(`${BASE_URL}/admin/confirm-email`, {
 			method: "POST",
 			headers: getHeaders(),
 			body: JSON.stringify({
@@ -457,20 +458,33 @@ const confirmEmailDirect = async (email: string, nota?: string): Promise<{ messa
 				nota: nota || "Verificado manualmente por administrador",
 			}),
 		});
+	} catch (netErr) {
+		console.error(`[UserService] ERROR: Network error when calling admin/confirm-email:`, netErr);
+		const wrapped = new Error(
+			`Network error confirming email: ${netErr instanceof Error ? netErr.message : String(netErr)}`,
+		);
+		(wrapped as any).original = netErr;
+		throw wrapped;
+	}
 
-		if (!response.ok) {
-			const errorText = await response.text();
-			console.error(`[UserService] ERROR: admin/confirm-email failed with status ${response.status}:`, errorText);
-			throw new Error(`Error ${response.status}: ${errorText || "No se pudo verificar el email"}`);
-		}
+	// Response check outside the catch that handles handleResponse() errors to avoid "throw of exception caught locally" warning
+	if (response && !response.ok) {
+		const errorText = await response.text();
+		console.error(`[UserService] ERROR: admin/confirm-email failed with status ${response.status}:`, errorText);
+		throw new Error(`Error ${response.status}: ${errorText || "No se pudo verificar el email"}`);
+	}
 
-		const data = await handleResponse(response);
+	try {
+		const data = await handleResponse(response as Response);
 		console.log(`[UserService] Email confirmation result:`, data);
 
-		return data || { isSuccess: true, message: "Email verificado correctamente" };
+		return (data as any) || { isSuccess: true, message: "Email verificado correctamente" };
 	} catch (error) {
 		console.error(`[UserService] ERROR: Error confirming email:`, error);
-		throw error;
+		const msg = error instanceof Error ? error.message : String(error);
+		const wrapped = new Error(`Error confirming email: ${msg}`);
+		(wrapped as any).original = error;
+		throw wrapped;
 	}
 };
 

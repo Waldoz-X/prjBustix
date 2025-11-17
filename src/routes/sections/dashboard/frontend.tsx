@@ -7,6 +7,8 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{ path: "workbench", element: Component("/pages/dashboard/workbench") },
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "debug-auth", element: Component("/pages/dashboard/debug-auth") },
+		// Ruta de eventos (viajes)
+		{ path: "events", element: Component("/pages/management/events") },
 		{
 			path: "components",
 			children: [

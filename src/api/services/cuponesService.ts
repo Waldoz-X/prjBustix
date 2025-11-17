@@ -3,7 +3,7 @@
  * Endpoints: GET, POST, PUT, DELETE cupones y validación
  */
 
-const BASE_URL = "http://localhost:5289/api/Cupones";
+const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Cupones";
 
 /**
  * Obtener el token de autenticación del localStorage

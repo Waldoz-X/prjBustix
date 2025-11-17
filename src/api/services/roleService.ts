@@ -66,7 +66,7 @@ export interface RolePermisosResponse {
 	};
 }
 
-const BASE_URL = "http://localhost:5289/api/Roles";
+const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Roles";
 
 /**
  * Obtiene el token del localStorage
