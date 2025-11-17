@@ -4,6 +4,7 @@ import { Component } from "./utils";
 
 export function getFrontendDashboardRoutes(): RouteObject[] {
 	return [
+		{ path: "fleet", element: Component("/pages/unidades") },
 		{ path: "workbench", element: Component("/pages/dashboard/workbench") },
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "debug-auth", element: Component("/pages/dashboard/debug-auth") },
