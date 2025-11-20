@@ -60,7 +60,7 @@ export const frontendNavData: NavProps["data"] = [
 			},
 			{
 				title: "Rutas Públicas",
-				path: "/routes/public",
+				path: "/rutas",
 				icon: <Icon icon="solar:map-point-bold-duotone" size="24" />,
 				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
 			},

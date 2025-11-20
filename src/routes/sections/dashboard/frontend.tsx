@@ -4,7 +4,10 @@ import { Component } from "./utils";
 
 export function getFrontendDashboardRoutes(): RouteObject[] {
 	return [
+		{ path: "rutas", element: Component("/pages/rutas") },
 		{ path: "fleet", element: Component("/pages/unidades") },
+		{ path: "rutas", element: Component("/pages/rutas") },
+
 		// Operadores (mapea a src/pages/operators con subrutas)
 		{
 			path: "operators",
