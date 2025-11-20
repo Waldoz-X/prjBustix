@@ -5,6 +5,15 @@ import { Component } from "./utils";
 export function getFrontendDashboardRoutes(): RouteObject[] {
 	return [
 		{ path: "fleet", element: Component("/pages/unidades") },
+		// Operadores (mapea a src/pages/operators con subrutas)
+		{
+			path: "operators",
+			children: [
+				{ index: true, element: <Navigate to="list" replace /> },
+				{ path: "list", element: Component("/pages/operators/list") },
+				{ path: "roles", element: Component("/pages/operators/roles") },
+			],
+		},
 		{ path: "workbench", element: Component("/pages/dashboard/workbench") },
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "debug-auth", element: Component("/pages/dashboard/debug-auth") },
@@ -63,6 +72,8 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 				},
 				// Ruta de cupones
 				{ path: "cupones", element: Component("/pages/management/cupones") },
+				// Ruta de Viajes (Gestión de Viajes)
+				{ path: "trips", element: Component("/pages/management/trips") },
 			],
 		},
 		{

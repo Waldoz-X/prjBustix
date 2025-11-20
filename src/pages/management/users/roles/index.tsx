@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Edit, Plus, Search, Shield, Trash2, Users, UserPlus, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Edit, Plus, Search, Shield, Trash2, UserPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import roleService, { type CreateRoleDto, type RoleDto, type UpdateRoleDto } from "@/api/services/roleService";
+import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
@@ -10,7 +11,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Skeleton } from "@/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 
 export default function RolesPage() {
 	const queryClient = useQueryClient();

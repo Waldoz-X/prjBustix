@@ -11,8 +11,8 @@ import { Checkbox } from "@/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { cn } from "@/utils";
-import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 import { logger } from "@/utils/logger";
+import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 
 export function LoginForm({ className }: { className?: string }) {
 	const { t } = useTranslation();

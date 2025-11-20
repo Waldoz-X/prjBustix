@@ -1,6 +1,6 @@
 import { Navigate } from "react-router";
 import { toast } from "sonner";
-import { useUserToken, useUserInfo } from "@/store/userStore";
+import { useUserInfo, useUserToken } from "@/store/userStore";
 import { hasAnyPermission, hasPermission, isTokenValid } from "@/utils/jwt";
 
 // Utility to check admin role from store (handles string or object roles)

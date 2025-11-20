@@ -6,9 +6,9 @@ import { Button } from "@/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/ui/input-otp";
+import { logger } from "@/utils/logger";
 import { ReturnButton } from "./components/ReturnButton";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
-import { logger } from "@/utils/logger";
 
 interface CountdownProps {
 	value: number;

@@ -12,10 +12,14 @@ const getToken = (): string | null => {
 	return localStorage.getItem("token");
 };
 
-const getHeaders = () => ({
-	"Content-Type": "application/json",
-	Authorization: `Bearer ${getToken()}`,
-});
+const getHeaders = () => {
+	const token = getToken();
+	const headers: Record<string, string> = {
+		"Content-Type": "application/json",
+	};
+	if (token) headers.Authorization = `Bearer ${token}`;
+	return headers;
+};
 
 // Helper: convertir ticks (.NET 100-ns ticks) a "HH:mm:ss"
 const ticksToTimeString = (ticks: number): string => {
@@ -32,7 +36,7 @@ const handleResponse = async (response: Response) => {
 		let parsed: any;
 		try {
 			parsed = await response.json(); // Leer como JSON para obtener detalles del error
-		} catch (e) {
+		} catch (_e) {
 			// Si no es JSON, tratar de leer texto
 			try {
 				parsed = { title: await response.text() };
@@ -200,7 +204,7 @@ const createEvento = async (payload: CreateEventoDto): Promise<EventoDto> => {
 		}
 
 		// Normalizar horaInicio: si viene como objeto { ticks } o número, convertir a string HH:mm:ss
-		if (anyPayload && anyPayload.horaInicio) {
+		if (anyPayload?.horaInicio) {
 			const h = anyPayload.horaInicio;
 			if (typeof h === "object" && h !== null && typeof h.ticks === "number") {
 				anyPayload.horaInicio = ticksToTimeString(h.ticks);
@@ -246,7 +250,7 @@ const createEvento = async (payload: CreateEventoDto): Promise<EventoDto> => {
 		console.error("[EventosService] Ciudad requerida en dto", dto);
 		throw { status: 400, message: "La ciudad (dto.Ciudad) es requerida.", details: { field: "Ciudad" } };
 	}
-	if (!dto.Fecha || isNaN(Date.parse(dto.Fecha))) {
+	if (!dto.Fecha || Number.isNaN(Date.parse(dto.Fecha))) {
 		console.error("[EventosService] Fecha inválida en dto", dto);
 		throw {
 			status: 400,
@@ -346,7 +350,7 @@ const updateEvento = async (id: number, payload: UpdateEventoDto): Promise<Event
 
 	// Conversión defensiva igual que en create
 	try {
-		if (anyPayload && anyPayload.horaInicio) {
+		if (anyPayload?.horaInicio) {
 			const h = anyPayload.horaInicio;
 			if (typeof h === "object" && h !== null && typeof h.ticks === "number") {
 				anyPayload.horaInicio = ticksToTimeString(h.ticks);
@@ -398,7 +402,7 @@ const updateEvento = async (id: number, payload: UpdateEventoDto): Promise<Event
 			details: { field: "Ciudad" },
 		};
 	}
-	if (!dtoU.Fecha || isNaN(Date.parse(dtoU.Fecha))) {
+	if (!dtoU.Fecha || Number.isNaN(Date.parse(dtoU.Fecha))) {
 		console.error("[EventosService] Fecha inválida en dto para update", dtoU);
 		throw {
 			status: 400,
@@ -517,8 +521,8 @@ const getViajesEvento = async (id: number): Promise<any[]> => {
 };
 
 // Caracteres no permitidos a nivel cliente/servicio (se detectan y se rechazan)
-const forbiddenPattern = /(--|;|<|>|\/\*|\*\/|\$|\||\\|%|&)/g;
-const hasForbiddenChars = (s: any) => {
+const forbiddenPattern = /(--|;|<|>|\/\*|\*\/|\$|\||\\|%|&)/;
+const hasForbiddenChars = (s: any): boolean => {
 	if (s === null || s === undefined) return false;
 	try {
 		return forbiddenPattern.test(String(s));

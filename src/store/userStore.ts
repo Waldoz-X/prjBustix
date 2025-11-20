@@ -5,8 +5,8 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { Permission, Role, UserInfo, UserToken } from "#/entity";
 import { StorageEnum } from "#/enum";
 import userService, { type LoginResponse } from "@/api/services/userService";
-import { logError, sanitizeForLog } from "../utils/error-handler";
 import { logger } from "@/utils/logger";
+import { logError, sanitizeForLog } from "../utils/error-handler";
 import { sanitizeEmail, validatePassword } from "../utils/security";
 
 // Tipos para el login

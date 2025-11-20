@@ -106,6 +106,12 @@ export const frontendNavData: NavProps["data"] = [
 				icon: <Icon icon="solar:document-text-bold-duotone" size="24" />,
 				auth: ["Admin", "Manager"], // Solo Admin y Manager
 			},
+			{
+				title: "Gestión de Viajes",
+				path: "/management/trips",
+				icon: <Icon icon="solar:bus-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager", "Operator"],
+			},
 		],
 	},
 	{
@@ -118,10 +124,20 @@ export const frontendNavData: NavProps["data"] = [
 				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
 			},
 			{
-				title: "Operadores",
+				title: "Staff y Operadores",
 				path: "/operators",
 				icon: <Icon icon="solar:user-check-rounded-bold-duotone" size="24" />,
 				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				children: [
+					{
+						title: "Lista de Operadores",
+						path: "/operators/list",
+					},
+					{
+						title: "Crear Operador",
+						path: "/operators/create",
+					},
+				],
 			},
 			{
 				title: "Mantenimientos",

@@ -4,9 +4,9 @@ import { Icon } from "@/components/icon";
 import { Button } from "@/ui/button";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
+import { logger } from "@/utils/logger";
 import { ReturnButton } from "./components/ReturnButton";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
-import { logger } from "@/utils/logger";
 
 function ResetForm() {
 	const { t } = useTranslation();

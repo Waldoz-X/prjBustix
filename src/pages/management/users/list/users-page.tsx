@@ -44,9 +44,9 @@ import {
 } from "@/ui/dialog";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
+import { Progress } from "@/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
-import { Progress } from "@/ui/progress";
 import { handleApiError } from "@/utils/error-handler";
 
 /**
@@ -379,7 +379,7 @@ export default function UsersPage() {
 		{ label: "Una mayúscula (A-Z)", test: (p: string) => /[A-Z]/.test(p) },
 		{ label: "Una minúscula (a-z)", test: (p: string) => /[a-z]/.test(p) },
 		{ label: "Un número (0-9)", test: (p: string) => /\d/.test(p) },
-		{ label: "Un símbolo (!@#$% etc.)", test: (p: string) => /[!@#$%^&*(),.?":{}|<>_\-]/.test(p) },
+		{ label: "Un símbolo (!@#$% etc.)", test: (p: string) => /[!@#$%^&*(),.?":{}|<>_-]/.test(p) },
 	];
 	const passedCount = passwordRequirements.filter((r) => r.test(createForm.password)).length;
 	const passwordStrengthPercent = (passedCount / passwordRequirements.length) * 100;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/routes/hooks";
 import { useUserActions, useUserToken } from "@/store/userStore";
-import { clearSession, isTokenValid } from "@/utils/jwt";
+import { clearSession, hasAnyPermission, hasPermission, hasRole, isAdmin, isTokenValid } from "@/utils/jwt";
 
 /**
  * Hook que verifica la validez de la sesión periódicamente
@@ -64,7 +64,6 @@ export function useHasPermission(permission: string): boolean {
 
 	if (!accessToken || !isTokenValid(accessToken)) return false;
 
-	const { hasPermission } = require("@/utils/jwt");
 	return hasPermission(accessToken, permission);
 }
 
@@ -76,7 +75,6 @@ export function useHasAnyPermission(permissions: string[]): boolean {
 
 	if (!accessToken || !isTokenValid(accessToken)) return false;
 
-	const { hasAnyPermission } = require("@/utils/jwt");
 	return hasAnyPermission(accessToken, permissions);
 }
 
@@ -88,7 +86,6 @@ export function useIsAdmin(): boolean {
 
 	if (!accessToken || !isTokenValid(accessToken)) return false;
 
-	const { isAdmin } = require("@/utils/jwt");
 	return isAdmin(accessToken);
 }
 
@@ -100,6 +97,5 @@ export function useHasRole(role: string): boolean {
 
 	if (!accessToken || !isTokenValid(accessToken)) return false;
 
-	const { hasRole } = require("@/utils/jwt");
 	return hasRole(accessToken, role);
 }

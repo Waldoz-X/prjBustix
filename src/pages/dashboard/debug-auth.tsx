@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { useUserInfo, useUserToken } from "@/store/userStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { getUserInfoFromToken } from "@/utils/jwt";
 
 export default function DebugAuth() {
