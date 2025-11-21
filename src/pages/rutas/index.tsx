@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Loader2, Map as MapIcon, MapPin, Plus, Power, T
 import { useEffect, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { toast } from "sonner";
-import { type CrearPlantillaRutaDto, type PlantillaRutaResponseDto, rutasService } from "@/api/services/rutasService";
+import rutasService, { type CreateRutaDto, type RutaDto } from "@/api/services/rutasService";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -100,20 +100,20 @@ export default function RutasPage() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	// Inicializar Partida y Llegada con la posición por defecto
-	const [rutaForm, setRutaForm] = useState<CrearPlantillaRutaDto>({
-		CodigoRuta: "",
-		NombreRuta: "",
-		CiudadOrigen: "",
-		CiudadDestino: "",
-		PuntoPartidaLat: defaultPosition[0],
-		PuntoPartidaLong: defaultPosition[1],
-		PuntoPartidaNombre: "",
-		PuntoLlegadaLat: defaultPosition[0],
-		PuntoLlegadaLong: defaultPosition[1],
-		PuntoLlegadaNombre: "",
-		DistanciaKm: 0,
-		TiempoEstimadoMinutos: 0,
-		Paradas: [],
+	const [rutaForm, setRutaForm] = useState<CreateRutaDto>({
+		codigoRuta: "",
+		nombreRuta: "",
+		ciudadOrigen: "",
+		ciudadDestino: "",
+		puntoPartidaLat: defaultPosition[0],
+		puntoPartidaLong: defaultPosition[1],
+		puntoPartidaNombre: "",
+		puntoLlegadaLat: defaultPosition[0],
+		puntoLlegadaLong: defaultPosition[1],
+		puntoLlegadaNombre: "",
+		distanciaKm: 0,
+		tiempoEstimadoMinutos: 0,
+		paradas: [],
 	});
 
 	const [mapCenter, setMapCenter] = useState<[number, number]>(defaultPosition);
@@ -128,18 +128,18 @@ export default function RutasPage() {
 
 	const handleMapSelect = (lat: number, lng: number) => {
 		if (mapMode === "partida") {
-			setRutaForm((prevForm) => ({
+			setRutaForm((prevForm: any) => ({
 				...prevForm,
-				PuntoPartidaLat: lat,
-				PuntoPartidaLong: lng,
-				PuntoPartidaNombre: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+				puntoPartidaLat: lat,
+				puntoPartidaLong: lng,
+				puntoPartidaNombre: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
 			}));
 		} else {
-			setRutaForm((prevForm) => ({
+			setRutaForm((prevForm: any) => ({
 				...prevForm,
-				PuntoLlegadaLat: lat,
-				PuntoLlegadaLong: lng,
-				PuntoLlegadaNombre: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+				puntoLlegadaLat: lat,
+				puntoLlegadaLong: lng,
+				puntoLlegadaNombre: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
 			}));
 		}
 	};
@@ -147,16 +147,16 @@ export default function RutasPage() {
 	const isFormValid = () => {
 		// Verificar que los puntos hayan sido seleccionados (deben ser diferentes entre sí)
 		const puntosSeleccionados =
-			rutaForm.PuntoPartidaLat !== rutaForm.PuntoLlegadaLat || rutaForm.PuntoPartidaLong !== rutaForm.PuntoLlegadaLong;
+			rutaForm.puntoPartidaLat !== rutaForm.puntoLlegadaLat || rutaForm.puntoPartidaLong !== rutaForm.puntoLlegadaLong;
 
 		// Verificar que los campos de texto y numéricos sean válidos
 		const camposValidos =
-			rutaForm.CodigoRuta.trim().length >= 3 &&
-			rutaForm.NombreRuta.trim().length >= 3 &&
-			rutaForm.CiudadOrigen.trim().length >= 3 &&
-			rutaForm.CiudadDestino.trim().length >= 3 &&
-			rutaForm.DistanciaKm > 0 &&
-			rutaForm.TiempoEstimadoMinutos > 0;
+			rutaForm.codigoRuta.trim().length >= 3 &&
+			rutaForm.nombreRuta.trim().length >= 3 &&
+			rutaForm.ciudadOrigen.trim().length >= 3 &&
+			rutaForm.ciudadDestino.trim().length >= 3 &&
+			rutaForm.distanciaKm > 0 &&
+			rutaForm.tiempoEstimadoMinutos > 0;
 
 		return puntosSeleccionados && camposValidos;
 	};
@@ -165,7 +165,7 @@ export default function RutasPage() {
 		mutationFn: (id: number) => rutasService.toggle(id),
 		onSuccess: (data) => {
 			queryClient.invalidateQueries({ queryKey: ["rutas"] });
-			toast.success(data.message);
+			toast.success((data as any).message);
 		},
 		onError: (err: any) => {
 			toast.error(`Error al cambiar estado: ${err.message}`);
@@ -184,25 +184,25 @@ export default function RutasPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: (data: CrearPlantillaRutaDto) => rutasService.create(data),
+		mutationFn: (data: CreateRutaDto) => rutasService.create(data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["rutas"] });
 			toast.success("Ruta creada correctamente");
 			setIsCreateOpen(false);
 			setRutaForm({
-				CodigoRuta: "",
-				NombreRuta: "",
-				CiudadOrigen: "",
-				CiudadDestino: "",
-				PuntoPartidaLat: defaultPosition[0],
-				PuntoPartidaLong: defaultPosition[1],
-				PuntoPartidaNombre: "",
-				PuntoLlegadaLat: defaultPosition[0],
-				PuntoLlegadaLong: defaultPosition[1],
-				PuntoLlegadaNombre: "",
-				DistanciaKm: 0,
-				TiempoEstimadoMinutos: 0,
-				Paradas: [],
+				codigoRuta: "",
+				nombreRuta: "",
+				ciudadOrigen: "",
+				ciudadDestino: "",
+				puntoPartidaLat: defaultPosition[0],
+				puntoPartidaLong: defaultPosition[1],
+				puntoPartidaNombre: "",
+				puntoLlegadaLat: defaultPosition[0],
+				puntoLlegadaLong: defaultPosition[1],
+				puntoLlegadaNombre: "",
+				distanciaKm: 0,
+				tiempoEstimadoMinutos: 0,
+				paradas: [],
 			});
 			setMapCenter(defaultPosition);
 		},
@@ -250,15 +250,15 @@ export default function RutasPage() {
 			) : (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{rutas && rutas.length > 0 ? (
-						rutas.map((ruta: PlantillaRutaResponseDto) => {
-							const expanded = expandedCards.includes(ruta.RutaID);
+						rutas.map((ruta: RutaDto) => {
+							const expanded = expandedCards.includes(ruta.rutaID);
 							return (
-								<Card key={ruta.RutaID} className="hover:shadow-lg transition-shadow">
+								<Card key={ruta.rutaID} className="hover:shadow-lg transition-shadow">
 									<CardHeader>
 										<div className="flex items-start justify-between">
 											<div className="flex items-center gap-2">
 												<MapIcon className="h-5 w-5 text-primary" />
-												<CardTitle className="text-lg">{ruta.NombreRuta}</CardTitle>
+												<CardTitle className="text-lg">{ruta.nombreRuta}</CardTitle>
 											</div>
 											<div className="flex gap-1">
 												<Button
@@ -266,7 +266,7 @@ export default function RutasPage() {
 													size="icon"
 													onClick={() => {
 														setExpandedCards((prev) =>
-															expanded ? prev.filter((id) => id !== ruta.RutaID) : [...prev, ruta.RutaID],
+															expanded ? prev.filter((id) => id !== ruta.rutaID) : [...prev, ruta.rutaID],
 														);
 													}}
 													title={expanded ? "Ocultar detalles" : "Ver detalles"}
@@ -275,21 +275,21 @@ export default function RutasPage() {
 													{expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
 												</Button>
 												<Button
-													variant={ruta.Activa ? "default" : "outline"}
+													variant={ruta.activa ? "default" : "outline"}
 													size="icon"
 													onClick={() => {
-														const action = ruta.Activa ? "desactivar" : "activar";
+														const action = ruta.activa ? "desactivar" : "activar";
 														if (
 															window.confirm(
-																`¿${action.charAt(0).toUpperCase() + action.slice(1)} la ruta "${ruta.NombreRuta}"?`,
+																`¿${action.charAt(0).toUpperCase() + action.slice(1)} la ruta "${ruta.nombreRuta}"?`,
 															)
 														) {
-															toggleMutation.mutate(ruta.RutaID);
+															toggleMutation.mutate(ruta.rutaID);
 														}
 													}}
 													disabled={toggleMutation.isPending}
 													className="h-8 w-8"
-													title={ruta.Activa ? "Desactivar ruta" : "Activar ruta"}
+													title={ruta.activa ? "Desactivar ruta" : "Activar ruta"}
 												>
 													{toggleMutation.isPending ? (
 														<Loader2 className="h-4 w-4 animate-spin" />
@@ -301,8 +301,8 @@ export default function RutasPage() {
 													variant="ghost"
 													size="icon"
 													onClick={() => {
-														if (window.confirm(`¿Eliminar la ruta "${ruta.NombreRuta}"?`)) {
-															deleteMutation.mutate(ruta.RutaID);
+														if (window.confirm(`¿Eliminar la ruta "${ruta.nombreRuta}"?`)) {
+															deleteMutation.mutate(ruta.rutaID);
 														}
 													}}
 													disabled={deleteMutation.isPending}
@@ -319,9 +319,9 @@ export default function RutasPage() {
 										</div>
 										<CardDescription>
 											<Badge variant="secondary" className="mr-2">
-												{ruta.CodigoRuta}
+												{ruta.codigoRuta}
 											</Badge>
-											<Badge variant={ruta.Activa ? "default" : "outline"}>{ruta.Activa ? "Activa" : "Inactiva"}</Badge>
+											<Badge variant={ruta.activa ? "default" : "outline"}>{ruta.activa ? "Activa" : "Inactiva"}</Badge>
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-3">
@@ -329,51 +329,51 @@ export default function RutasPage() {
 											<div className="flex items-center gap-2 text-sm">
 												<MapPin className="h-4 w-4 text-green-600" />
 												<span className="font-medium">Origen:</span>
-												<span className="text-muted-foreground">{ruta.CiudadOrigen}</span>
+												<span className="text-muted-foreground">{ruta.ciudadOrigen}</span>
 											</div>
 											<div className="flex items-center gap-2 text-sm">
 												<MapPin className="h-4 w-4 text-red-600" />
 												<span className="font-medium">Destino:</span>
-												<span className="text-muted-foreground">{ruta.CiudadDestino}</span>
+												<span className="text-muted-foreground">{ruta.ciudadDestino}</span>
 											</div>
 										</div>
 										<div className="pt-2 border-t space-y-2">
 											<div className="grid grid-cols-2 gap-2 text-sm">
 												<div>
 													<span className="text-muted-foreground">Distancia:</span>
-													<p className="font-semibold">{ruta.DistanciaKm} km</p>
+													<p className="font-semibold">{ruta.distanciaKm} km</p>
 												</div>
 												<div>
 													<span className="text-muted-foreground">Tiempo:</span>
-													<p className="font-semibold">{ruta.TiempoEstimadoMinutos} min</p>
+													<p className="font-semibold">{ruta.tiempoEstimadoMinutos} min</p>
 												</div>
 											</div>
 										</div>
 										{expanded && (
 											<div className="pt-2 border-t space-y-2">
-												{ruta.PuntoPartidaLat != null &&
-													ruta.PuntoPartidaLong != null &&
-													ruta.PuntoLlegadaLat != null &&
-													ruta.PuntoLlegadaLong != null && (
+												{ruta.puntoPartidaLat != null &&
+													ruta.puntoPartidaLong != null &&
+													ruta.puntoLlegadaLat != null &&
+													ruta.puntoLlegadaLong != null && (
 														<div className="space-y-1 pt-2 border-t">
 															<p className="text-xs text-muted-foreground">
-																<strong>Partida:</strong> {ruta.PuntoPartidaLat.toFixed(6)},{" "}
-																{ruta.PuntoPartidaLong.toFixed(6)}
+																<strong>Partida:</strong> {ruta.puntoPartidaLat.toFixed(6)},{" "}
+																{ruta.puntoPartidaLong.toFixed(6)}
 															</p>
 															<p className="text-xs text-muted-foreground">
-																<strong>Llegada:</strong> {ruta.PuntoLlegadaLat.toFixed(6)},{" "}
-																{ruta.PuntoLlegadaLong.toFixed(6)}
+																<strong>Llegada:</strong> {ruta.puntoLlegadaLat.toFixed(6)},{" "}
+																{ruta.puntoLlegadaLong.toFixed(6)}
 															</p>
 														</div>
 													)}
 												<div className="grid grid-cols-2 gap-4 pt-2 border-t">
 													<div className="text-center">
 														<p className="text-xs text-muted-foreground">Paradas</p>
-														<p className="text-lg font-semibold">{ruta.TotalParadas ?? 0}</p>
+														<p className="text-lg font-semibold">{ruta.totalParadas ?? 0}</p>
 													</div>
 													<div className="text-center">
 														<p className="text-xs text-muted-foreground">Viajes</p>
-														<p className="text-lg font-semibold">{ruta.TotalViajes ?? 0}</p>
+														<p className="text-lg font-semibold">{ruta.totalViajes ?? 0}</p>
 													</div>
 												</div>
 											</div>
@@ -417,10 +417,10 @@ export default function RutasPage() {
 								<Input
 									id="codigoRuta"
 									placeholder="Ej: RUT-001"
-									value={rutaForm.CodigoRuta}
-									onChange={(e) => setRutaForm({ ...rutaForm, CodigoRuta: e.target.value.toUpperCase() })}
+									value={rutaForm.codigoRuta}
+									onChange={(e) => setRutaForm({ ...rutaForm, codigoRuta: e.target.value.toUpperCase() })}
 								/>
-								{rutaForm.CodigoRuta.trim().length < 3 && (
+								{rutaForm.codigoRuta.trim().length < 3 && (
 									<p className="text-xs text-destructive">Mínimo 3 caracteres</p>
 								)}
 							</div>
@@ -429,10 +429,10 @@ export default function RutasPage() {
 								<Input
 									id="nombreRuta"
 									placeholder="Ej: Ciudad de México - Guadalajara"
-									value={rutaForm.NombreRuta}
-									onChange={(e) => setRutaForm({ ...rutaForm, NombreRuta: e.target.value })}
+									value={rutaForm.nombreRuta}
+									onChange={(e) => setRutaForm({ ...rutaForm, nombreRuta: e.target.value })}
 								/>
-								{rutaForm.NombreRuta.trim().length < 3 && (
+								{rutaForm.nombreRuta.trim().length < 3 && (
 									<p className="text-xs text-destructive">Mínimo 3 caracteres</p>
 								)}
 							</div>
@@ -441,10 +441,10 @@ export default function RutasPage() {
 								<Input
 									id="ciudadOrigen"
 									placeholder="Ej: Ciudad de México"
-									value={rutaForm.CiudadOrigen}
-									onChange={(e) => setRutaForm({ ...rutaForm, CiudadOrigen: e.target.value })}
+									value={rutaForm.ciudadOrigen}
+									onChange={(e) => setRutaForm({ ...rutaForm, ciudadOrigen: e.target.value })}
 								/>
-								{rutaForm.CiudadOrigen.trim().length < 3 && (
+								{rutaForm.ciudadOrigen.trim().length < 3 && (
 									<p className="text-xs text-destructive">Mínimo 3 caracteres</p>
 								)}
 							</div>
@@ -453,10 +453,10 @@ export default function RutasPage() {
 								<Input
 									id="ciudadDestino"
 									placeholder="Ej: Guadalajara"
-									value={rutaForm.CiudadDestino}
-									onChange={(e) => setRutaForm({ ...rutaForm, CiudadDestino: e.target.value })}
+									value={rutaForm.ciudadDestino}
+									onChange={(e) => setRutaForm({ ...rutaForm, ciudadDestino: e.target.value })}
 								/>
-								{rutaForm.CiudadDestino.trim().length < 3 && (
+								{rutaForm.ciudadDestino.trim().length < 3 && (
 									<p className="text-xs text-destructive">Mínimo 3 caracteres</p>
 								)}
 							</div>
@@ -466,11 +466,11 @@ export default function RutasPage() {
 									id="distancia"
 									type="number"
 									placeholder="0"
-									value={rutaForm.DistanciaKm || ""}
-									onChange={(e) => setRutaForm({ ...rutaForm, DistanciaKm: Number(e.target.value) })}
+									value={rutaForm.distanciaKm || ""}
+									onChange={(e) => setRutaForm({ ...rutaForm, distanciaKm: Number(e.target.value) })}
 									min={1}
 								/>
-								{(!rutaForm.DistanciaKm || rutaForm.DistanciaKm < 1) && (
+								{(!rutaForm.distanciaKm || rutaForm.distanciaKm < 1) && (
 									<p className="text-xs text-destructive">Debe ser mayor a 0</p>
 								)}
 							</div>
@@ -480,11 +480,11 @@ export default function RutasPage() {
 									id="tiempo"
 									type="number"
 									placeholder="0"
-									value={rutaForm.TiempoEstimadoMinutos || ""}
-									onChange={(e) => setRutaForm({ ...rutaForm, TiempoEstimadoMinutos: Number(e.target.value) })}
+									value={rutaForm.tiempoEstimadoMinutos || ""}
+									onChange={(e) => setRutaForm({ ...rutaForm, tiempoEstimadoMinutos: Number(e.target.value) })}
 									min={1}
 								/>
-								{(!rutaForm.TiempoEstimadoMinutos || rutaForm.TiempoEstimadoMinutos < 1) && (
+								{(!rutaForm.tiempoEstimadoMinutos || rutaForm.tiempoEstimadoMinutos < 1) && (
 									<p className="text-xs text-destructive">Debe ser mayor a 0</p>
 								)}
 							</div>
@@ -523,8 +523,8 @@ export default function RutasPage() {
 									{/* 🎯 La solución al mapa roto */}
 									<MapResizer />{" "}
 									<MapSelector
-										partida={{ lat: rutaForm.PuntoPartidaLat, lng: rutaForm.PuntoPartidaLong }}
-										llegada={{ lat: rutaForm.PuntoLlegadaLat, lng: rutaForm.PuntoLlegadaLong }}
+										partida={{ lat: rutaForm.puntoPartidaLat, lng: rutaForm.puntoPartidaLong }}
+										llegada={{ lat: rutaForm.puntoLlegadaLat, lng: rutaForm.puntoLlegadaLong }}
 										onSelect={handleMapSelect}
 									/>
 								</MapContainer>
@@ -533,24 +533,24 @@ export default function RutasPage() {
 								<div>
 									<b>Punto de Partida:</b>
 									<div className="text-sm">
-										Lat: {rutaForm.PuntoPartidaLat.toFixed(6)} | Lng: {rutaForm.PuntoPartidaLong.toFixed(6)}
+										Lat: {rutaForm.puntoPartidaLat.toFixed(6)} | Lng: {rutaForm.puntoPartidaLong.toFixed(6)}
 									</div>
 									<Input
 										placeholder="Nombre del punto (opcional)"
-										value={rutaForm.PuntoPartidaNombre}
-										onChange={(e) => setRutaForm({ ...rutaForm, PuntoPartidaNombre: e.target.value })}
+										value={rutaForm.puntoPartidaNombre}
+										onChange={(e) => setRutaForm({ ...rutaForm, puntoPartidaNombre: e.target.value })}
 										className="mt-1"
 									/>
 								</div>
 								<div>
 									<b>Punto de Llegada:</b>
 									<div className="text-sm">
-										Lat: {rutaForm.PuntoLlegadaLat.toFixed(6)} | Lng: {rutaForm.PuntoLlegadaLong.toFixed(6)}
+										Lat: {rutaForm.puntoLlegadaLat.toFixed(6)} | Lng: {rutaForm.puntoLlegadaLong.toFixed(6)}
 									</div>
 									<Input
 										placeholder="Nombre del punto (opcional)"
-										value={rutaForm.PuntoLlegadaNombre}
-										onChange={(e) => setRutaForm({ ...rutaForm, PuntoLlegadaNombre: e.target.value })}
+										value={rutaForm.puntoLlegadaNombre}
+										onChange={(e) => setRutaForm({ ...rutaForm, puntoLlegadaNombre: e.target.value })}
 										className="mt-1"
 									/>
 								</div>

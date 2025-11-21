@@ -163,6 +163,11 @@ export interface CreateStaffAsignacionDto {
 	observaciones?: string;
 }
 
+export interface UpdateStaffAsignacionDto {
+	rolEnViaje: string;
+	observaciones?: string;
+}
+
 export interface ConflictoDisponibilidadDto {
 	viajeID: number;
 	codigoViaje: string;
@@ -202,6 +207,154 @@ export interface VerificarDisponibilidadParams {
 	unidadId?: number;
 	choferId?: string;
 	staffId?: string;
+}
+
+export interface ParadaClienteDto {
+	paradaViajeID: number;
+	nombreParada: string;
+	direccion: string;
+	latitud: number;
+	longitud: number;
+	ordenParada: number;
+	horaEstimadaLlegada: string;
+	tiempoEsperaMinutos: number;
+	precioBase: number;
+	cargoServicio: number;
+	precioTotal: number;
+	iva: number;
+	totalAPagar: number;
+	asientosDisponibles: number;
+	tieneDisponibilidad: boolean;
+}
+
+export interface PrecioParadaDto {
+	precioParadaID: number;
+	viajeID: number;
+	paradaViajeID: number;
+	nombreParada: string;
+	precioBase: number;
+	cargoServicio: number;
+	precioTotal: number;
+	esActivo: boolean;
+	fechaCreacion: string;
+	creadoPor: string;
+	nombreCreador: string;
+	observaciones: string;
+}
+
+export interface ConfigurarPrecioParadaDto {
+	paradaViajeID: number;
+	precioBase: number;
+	cargoServicio: number;
+	observaciones?: string;
+}
+
+export interface UpdatePrecioParadaDto {
+	paradaViajeID: number;
+	precioBase: number;
+	cargoServicio: number;
+	observaciones?: string;
+}
+
+// ==================== CHECK-IN PROGRESIVO ====================
+
+export interface EstadoParadaViajeDto {
+	estadoParadaViajeID: number;
+	viajeID: number;
+	codigoViaje: string;
+	paradaViajeID: number;
+	nombreParada: string;
+	direccion: string;
+	ordenParada: number;
+	horaEstimadaLlegada: string;
+	estado: string;
+	fechaHoraLlegadaChofer: string;
+	choferID: string;
+	nombreChofer: string;
+	latitudConfirmacion: number;
+	longitudConfirmacion: number;
+	fechaHoraInicioValidacion: string;
+	fechaHoraFinalizacionValidacion: string;
+	staffID: string;
+	nombreStaff: string;
+	totalPasajerosEsperados: number;
+	totalPasajerosAbordados: number;
+	totalPasajerosNoShow: number;
+	pasajerosPorValidar: number;
+	tuvoIncidencia: boolean;
+	observaciones: string;
+}
+
+export interface ProgresoCheckinDto {
+	viajeID: number;
+	codigoViaje: string;
+	estadoGeneral: string;
+	fechaSalida: string;
+	totalParadas: number;
+	paradasCompletadas: number;
+	paradaActual: number;
+	paradas: EstadoParadaViajeDto[];
+	totalPasajerosViaje: number;
+	totalAbordados: number;
+	totalNoShow: number;
+	totalPendientes: number;
+	porcentajeAvance: number;
+}
+
+export interface ConfirmarLlegadaDto {
+	paradaViajeID: number;
+	latitud: number;
+	longitud: number;
+	observaciones?: string;
+}
+
+export interface IniciarValidacionDto {
+	paradaViajeID: number;
+	observaciones?: string;
+}
+
+export interface FinalizarValidacionDto {
+	paradaViajeID: number;
+	totalAbordados: number;
+	totalNoShow: number;
+	observaciones?: string;
+}
+
+export interface ViajeDetalleClienteDto {
+	viajeID: number;
+	codigoViaje: string;
+	tipoViaje: string;
+	eventoID: number;
+	eventoNombre: string;
+	eventoDescripcion: string;
+	eventoFecha: string;
+	eventoRecinto: string;
+	eventoCiudad: string;
+	eventoUrlImagen: string;
+	rutaNombre: string;
+	ciudadOrigen: string;
+	ciudadDestino: string;
+	fechaSalida: string;
+	fechaLlegadaEstimada: string;
+	duracionEstimadaHoras: number;
+	cupoTotal: number;
+	asientosDisponibles: number;
+	asientosVendidos: number;
+	porcentajeOcupacion: number;
+	ventasAbiertas: boolean;
+	precioBase: number;
+	cargoServicio: number;
+	precioDesde: number;
+	precioHasta: number;
+	unidadModelo: string;
+	unidadPlacas: string;
+	capacidadUnidad: number;
+	choferNombre: string;
+	paradas: ParadaClienteDto[];
+	observaciones: string;
+	tieneServicioWifi: boolean;
+	tieneAireAcondicionado: boolean;
+	tieneBaño: boolean;
 }
 
 // Caracteres no permitidos a nivel cliente/servicio (se detectan y se rechazan)
@@ -255,6 +408,21 @@ const getViajeById = async (id: number): Promise<ViajeDto> => {
 	console.log("[ViajesService] Fetching viaje by ID:", id);
 
 	const response = await fetch(`${BASE_URL}/${id}`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * GET /api/Viajes/{id}/detalle-cliente
+ * Obtener detalle completo de un viaje para clientes (incluye paradas con precios, amenidades, etc.)
+ */
+const getDetalleCliente = async (id: number): Promise<ViajeDetalleClienteDto> => {
+	console.log("[ViajesService] Fetching detalle cliente for viaje:", id);
+
+	const response = await fetch(`${BASE_URL}/${id}/detalle-cliente`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
@@ -448,11 +616,20 @@ const getParadasViaje = async (id: number): Promise<ParadaDto[]> => {
 /**
  * GET /api/Viajes/{id}/manifiesto
  * Obtener manifiesto de pasajeros de un viaje
+ * @param id - ID del viaje
+ * @param compact - Si es true, retorna versión compacta (opcional)
+ * @param since - Filtrar cambios desde esta fecha (opcional)
  */
-const getManifiesto = async (id: number): Promise<ManifiestoDto> => {
-	console.log("[ViajesService] Fetching manifiesto for viaje:", id);
+const getManifiesto = async (id: number, options?: { compact?: boolean; since?: string }): Promise<ManifiestoDto> => {
+	console.log("[ViajesService] Fetching manifiesto for viaje:", id, options);
 
-	const response = await fetch(`${BASE_URL}/${id}/manifiesto`, {
+	const params = new URLSearchParams();
+	if (options?.compact !== undefined) params.append("compact", String(options.compact));
+	if (options?.since) params.append("since", options.since);
+
+	const url = params.toString() ? `${BASE_URL}/${id}/manifiesto?${params}` : `${BASE_URL}/${id}/manifiesto`;
+
+	const response = await fetch(url, {
 		method: "GET",
 		headers: getHeaders(),
 	});
@@ -524,6 +701,52 @@ const getStaff = async (id: number): Promise<AsignacionStaffDto[]> => {
 };
 
 /**
+ * PUT /api/Viajes/{viajeId}/staff/{asignacionId}
+ * Actualizar asignación de staff de un viaje
+ */
+const updateStaff = async (
+	viajeId: number,
+	asignacionId: number,
+	payload: UpdateStaffAsignacionDto,
+): Promise<AsignacionStaffDto> => {
+	console.log("[ViajesService] Updating staff assignment:", viajeId, asignacionId, payload);
+
+	// Validaciones cliente
+	if (!payload.rolEnViaje || String(payload.rolEnViaje).trim() === "") {
+		throw { status: 400, message: "El rol es requerido.", details: { field: "rolEnViaje" } };
+	}
+
+	// Validar caracteres prohibidos
+	const validationErrors: Record<string, string[]> = {};
+	const pushError = (key: string, msg: string) => {
+		if (!validationErrors[key]) validationErrors[key] = [];
+		validationErrors[key].push(msg);
+	};
+
+	if (hasForbiddenChars(payload.rolEnViaje)) pushError("rolEnViaje", "El campo Rol contiene caracteres no permitidos.");
+	if (payload.observaciones && hasForbiddenChars(payload.observaciones))
+		pushError("observaciones", "El campo Observaciones contiene caracteres no permitidos.");
+
+	if (Object.keys(validationErrors).length > 0) {
+		console.warn("[ViajesService] Rechazando staff update por caracteres prohibidos:", validationErrors);
+		throw {
+			status: 400,
+			title: "One or more validation errors occurred.",
+			statusText: "Bad Request",
+			errors: validationErrors,
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/staff/${asignacionId}`, {
+		method: "PUT",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
  * DELETE /api/Viajes/{viajeId}/staff/{asignacionId}
  * Eliminar asignación de staff de un viaje
  */
@@ -562,6 +785,290 @@ const getMisViajes = async (params?: MisViajesParams): Promise<ViajeDto[]> => {
 };
 
 /**
+ * GET /api/Viajes/{viajeId}/precios
+ * Obtener todos los precios de paradas de un viaje
+ */
+const getPreciosParadas = async (viajeId: number): Promise<PrecioParadaDto[]> => {
+	console.log("[ViajesService] Fetching precios paradas for viaje:", viajeId);
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/precios`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	const data = await handleResponse(response);
+	return Array.isArray(data) ? data : [];
+};
+
+/**
+ * GET /api/Viajes/{viajeId}/precios/parada/{paradaId}
+ * Obtener precio de una parada específica
+ */
+const getPrecioParada = async (viajeId: number, paradaId: number): Promise<PrecioParadaDto> => {
+	console.log("[ViajesService] Fetching precio for parada:", viajeId, paradaId);
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/precios/parada/${paradaId}`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/Viajes/{viajeId}/precios/configurar
+ * Configurar precios para múltiples paradas de un viaje
+ */
+const configurarPrecios = async (viajeId: number, precios: ConfigurarPrecioParadaDto[]): Promise<string> => {
+	console.log("[ViajesService] Configuring precios for viaje:", viajeId, precios);
+
+	// Validaciones cliente
+	if (!Array.isArray(precios)) {
+		console.error("[ViajesService] Precios debe ser un array:", precios);
+		throw { status: 400, message: "Los precios deben ser un array", details: { precios } };
+	}
+
+	if (precios.length === 0) {
+		throw { status: 400, message: "Debe proporcionar al menos un precio.", details: { field: "precios" } };
+	}
+
+	// Validar cada precio
+	for (let i = 0; i < precios.length; i++) {
+		const precio = precios[i];
+
+		if (!precio.paradaViajeID || precio.paradaViajeID <= 0) {
+			throw {
+				status: 400,
+				message: `Precio ${i}: El ID de la parada es requerido.`,
+				details: { index: i, field: "paradaViajeID" },
+			};
+		}
+
+		if (typeof precio.precioBase !== "number" || precio.precioBase < 0) {
+			throw {
+				status: 400,
+				message: `Precio ${i}: El precio base debe ser un número mayor o igual a 0.`,
+				details: { index: i, field: "precioBase" },
+			};
+		}
+
+		if (typeof precio.cargoServicio !== "number" || precio.cargoServicio < 0) {
+			throw {
+				status: 400,
+				message: `Precio ${i}: El cargo de servicio debe ser un número mayor o igual a 0.`,
+				details: { index: i, field: "cargoServicio" },
+			};
+		}
+	}
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/precios/configurar`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(precios),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * PUT /api/Viajes/{viajeId}/precios/{precioId}
+ * Actualizar precio de una parada
+ */
+const updatePrecioParada = async (
+	viajeId: number,
+	precioId: number,
+	payload: UpdatePrecioParadaDto,
+): Promise<PrecioParadaDto> => {
+	console.log("[ViajesService] Updating precio parada:", viajeId, precioId, payload);
+
+	// Validaciones cliente
+	if (!payload.paradaViajeID || payload.paradaViajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaViajeID" } };
+	}
+
+	if (typeof payload.precioBase !== "number" || payload.precioBase < 0) {
+		throw {
+			status: 400,
+			message: "El precio base debe ser un número mayor o igual a 0.",
+			details: { field: "precioBase" },
+		};
+	}
+
+	if (typeof payload.cargoServicio !== "number" || payload.cargoServicio < 0) {
+		throw {
+			status: 400,
+			message: "El cargo de servicio debe ser un número mayor o igual a 0.",
+			details: { field: "cargoServicio" },
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/precios/${precioId}`, {
+		method: "PUT",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * DELETE /api/Viajes/{viajeId}/precios/{precioId}
+ * Eliminar precio de una parada
+ */
+const deletePrecioParada = async (viajeId: number, precioId: number): Promise<void> => {
+	console.log("[ViajesService] Deleting precio parada:", viajeId, precioId);
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/precios/${precioId}`, {
+		method: "DELETE",
+		headers: getHeaders(),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Viajes/{viajeId}/precios/copiar-base
+ * Copiar precios base de la plantilla de ruta al viaje
+ */
+const copiarPreciosBase = async (viajeId: number): Promise<void> => {
+	console.log("[ViajesService] Copying base prices for viaje:", viajeId);
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/precios/copiar-base`, {
+		method: "POST",
+		headers: getHeaders(),
+	});
+
+	await handleResponse(response);
+};
+
+// ==================== CHECK-IN PROGRESIVO ====================
+
+/**
+ * GET /api/viajes/{viajeId}/checkin/progreso
+ * Obtener progreso del check-in progresivo de un viaje
+ */
+const getProgresoCheckin = async (viajeId: number): Promise<ProgresoCheckinDto> => {
+	console.log("[ViajesService] Fetching progreso checkin for viaje:", viajeId);
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/checkin/progreso`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/viajes/{viajeId}/checkin/confirmar-llegada
+ * Confirmar llegada del chofer a una parada
+ */
+const confirmarLlegada = async (viajeId: number, payload: ConfirmarLlegadaDto): Promise<EstadoParadaViajeDto> => {
+	console.log("[ViajesService] Confirming llegada for viaje:", viajeId, payload);
+
+	// Validaciones cliente
+	if (!payload || typeof payload !== "object") {
+		console.error("[ViajesService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.paradaViajeID || payload.paradaViajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaViajeID" } };
+	}
+
+	if (typeof payload.latitud !== "number" || payload.latitud < -90 || payload.latitud > 90) {
+		throw {
+			status: 400,
+			message: "La latitud debe ser un número entre -90 y 90.",
+			details: { field: "latitud" },
+		};
+	}
+
+	if (typeof payload.longitud !== "number" || payload.longitud < -180 || payload.longitud > 180) {
+		throw {
+			status: 400,
+			message: "La longitud debe ser un número entre -180 y 180.",
+			details: { field: "longitud" },
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/checkin/confirmar-llegada`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/viajes/{viajeId}/checkin/iniciar-validacion
+ * Iniciar proceso de validación de pasajeros en una parada
+ */
+const iniciarValidacion = async (viajeId: number, payload: IniciarValidacionDto): Promise<EstadoParadaViajeDto> => {
+	console.log("[ViajesService] Initiating validacion for viaje:", viajeId, payload);
+
+	// Validaciones cliente
+	if (!payload || typeof payload !== "object") {
+		console.error("[ViajesService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.paradaViajeID || payload.paradaViajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaViajeID" } };
+	}
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/checkin/iniciar-validacion`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/viajes/{viajeId}/checkin/finalizar-validacion
+ * Finalizar proceso de validación de pasajeros en una parada
+ */
+const finalizarValidacion = async (viajeId: number, payload: FinalizarValidacionDto): Promise<EstadoParadaViajeDto> => {
+	console.log("[ViajesService] Finalizing validacion for viaje:", viajeId, payload);
+
+	// Validaciones cliente
+	if (!payload || typeof payload !== "object") {
+		console.error("[ViajesService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.paradaViajeID || payload.paradaViajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaViajeID" } };
+	}
+
+	if (typeof payload.totalAbordados !== "number" || payload.totalAbordados < 0) {
+		throw {
+			status: 400,
+			message: "El total de abordados debe ser un número mayor o igual a 0.",
+			details: { field: "totalAbordados" },
+		};
+	}
+
+	if (typeof payload.totalNoShow !== "number" || payload.totalNoShow < 0) {
+		throw {
+			status: 400,
+			message: "El total de no-show debe ser un número mayor o igual a 0.",
+			details: { field: "totalNoShow" },
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/${viajeId}/checkin/finalizar-validacion`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
  * GET /api/Viajes/verificar-disponibilidad
  * Verificar disponibilidad de unidad, chofer o staff
  */
@@ -586,6 +1093,7 @@ const verificarDisponibilidad = async (params: VerificarDisponibilidadParams): P
 const viajesService = {
 	getAllViajes,
 	getViajeById,
+	getDetalleCliente,
 	createViaje,
 	updateViaje,
 	deleteViaje,
@@ -593,9 +1101,21 @@ const viajesService = {
 	getManifiesto,
 	assignStaff,
 	getStaff,
+	updateStaff,
 	removeStaff,
+	getPreciosParadas,
+	getPrecioParada,
+	configurarPrecios,
+	updatePrecioParada,
+	deletePrecioParada,
+	copiarPreciosBase,
 	getMisViajes,
 	verificarDisponibilidad,
+	// Check-in Progresivo
+	getProgresoCheckin,
+	confirmarLlegada,
+	iniciarValidacion,
+	finalizarValidacion,
 };
 
 export default viajesService;

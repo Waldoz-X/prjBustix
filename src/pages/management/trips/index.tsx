@@ -3,7 +3,7 @@ import { Bus, Edit, Eye, Loader2, MapPin, MoreHorizontal, Plus, Search, Trash2 }
 import { useState } from "react";
 import { toast } from "sonner";
 import eventosService, { type EventoDto } from "@/api/services/eventosService";
-import { type UnidadResponseDto, unidadService } from "@/api/services/unidadService";
+import unidadService, { type UnidadDto } from "@/api/services/unidadService";
 import viajesService, {
 	type CreateViajeDto,
 	type UpdateViajeDto,
@@ -97,32 +97,33 @@ export default function ViajesPage() {
 		staleTime: 1000 * 60 * 2,
 	});
 	const { data: unidadesResp, isLoading: isLoadingUnidades } = useQuery<
-		{ success: boolean; message: string; data: UnidadResponseDto[] } | UnidadResponseDto[]
+		{ success: boolean; message: string; data: UnidadDto[] } | UnidadDto[]
 	>({ queryKey: ["unidades"], queryFn: () => unidadService.getAll(), staleTime: 1000 * 60 * 2 });
-	const unidades: UnidadResponseDto[] = Array.isArray(unidadesResp) ? unidadesResp : (unidadesResp?.data ?? []);
+	const unidades: UnidadDto[] = Array.isArray(unidadesResp) ? unidadesResp : (unidadesResp?.data ?? []);
 
 	// Normalizar propiedades posibles devueltas por el API (minúsculas/variantes)
+	// Normalizar propiedades posibles devueltas por el API (minúsculas/variantes)
 	const normalizedUnidades = (unidades || []).map((u: any) => ({
-		Id: u.Id ?? u.id ?? u.unidadID ?? u.Uid ?? 0,
+		Id: u.id ?? u.Id ?? u.unidadID ?? u.Uid ?? 0,
 		Placas:
-			u.Placas ??
 			u.placas ??
+			u.Placas ??
 			u.Placa ??
 			u.placa ??
 			u.numeroEconomico ??
 			u.NumeroEconomico ??
 			String(u.placas ?? u.Placas ?? ""),
-		NumeroEconomico: u.NumeroEconomico ?? u.numeroEconomico ?? u.Numero ?? u.numero ?? "",
-		Marca: u.Marca ?? u.marca ?? "",
-		Modelo: u.Modelo ?? u.modelo ?? "",
-		CapacidadAsientos: u.CapacidadAsientos ?? u.capacidadAsientos ?? 0,
-		TieneClimatizacion: u.TieneClimatizacion ?? u.tieneClimatizacion ?? false,
+		NumeroEconomico: u.numeroEconomico ?? u.NumeroEconomico ?? u.Numero ?? u.numero ?? "",
+		Marca: u.marca ?? u.Marca ?? "",
+		Modelo: u.modelo ?? u.Modelo ?? "",
+		CapacidadAsientos: u.capacidadAsientos ?? u.CapacidadAsientos ?? 0,
+		TieneClimatizacion: u.tieneClimatizacion ?? u.TieneClimatizacion ?? false,
 		// propiedades con tilde accedidas por corchetes para evitar identifiers con caracteres no ASCII
 		TieneBano: u["TieneBa\u00F1o"] ?? u.TieneBano ?? u["tieneBa\u00F1o"] ?? u.tieneBano ?? false,
-		TieneWifi: u.TieneWifi ?? u.tieneWifi ?? false,
-		UrlFoto: u.UrlFoto ?? u.urlFoto ?? u.photo ?? "",
-		Estatus: u.Estatus ?? u.estatus ?? 0,
-		FechaAlta: u.FechaAlta ?? u.fechaAlta ?? null,
+		TieneWifi: u.tieneWifi ?? u.TieneWifi ?? false,
+		UrlFoto: u.urlFoto ?? u.UrlFoto ?? u.photo ?? "",
+		Estatus: u.estatus ?? u.Estatus ?? 0,
+		FechaAlta: u.fechaAlta ?? u.FechaAlta ?? null,
 	}));
 
 	// mutations

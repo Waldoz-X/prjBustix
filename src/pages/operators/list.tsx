@@ -31,7 +31,8 @@ import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { handleApiError } from "@/utils/error-handler";
-import { CreateUserDialog } from "./components/create-user-dialog";
+
+// import { CreateUserDialog } from "./components/create-user-dialog";
 
 // Improved type safety for status config
 interface StatusConfigItem {
@@ -56,7 +57,7 @@ export default function OperatorsListPage() {
 
 	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState<number | "all">("all");
-	const [isCreateOpen, setIsCreateOpen] = useState(false);
+	// const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	// Estados para acciones de usuario
 	const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
@@ -293,10 +294,11 @@ export default function OperatorsListPage() {
 						<Settings className="mr-2 h-4 w-4" />
 						Gestionar Roles
 					</Button>
-					<Button onClick={() => setIsCreateOpen(true)}>
+					{/* TODO: Crear componente CreateUserDialog */}
+					{/* <Button onClick={() => setIsCreateOpen(true)}>
 						<Plus className="mr-2 h-4 w-4" />
 						Nuevo Usuario
-					</Button>
+					</Button> */}
 				</div>
 			</div>
 
@@ -528,10 +530,11 @@ export default function OperatorsListPage() {
 											? "Intenta ajustar los filtros de búsqueda"
 											: "Comienza creando tu primer operador o miembro del staff"}
 									</p>
-									<Button onClick={() => setIsCreateOpen(true)}>
+									{/* TODO: Crear componente CreateUserDialog */}
+									{/* <Button onClick={() => setIsCreateOpen(true)}>
 										<Plus className="mr-2 h-4 w-4" />
 										Nuevo Usuario
-									</Button>
+									</Button> */}
 								</div>
 							)}
 						</CardContent>
@@ -579,7 +582,7 @@ export default function OperatorsListPage() {
 			</Tabs>
 
 			{/* Create User Dialog Component */}
-			<CreateUserDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} allowedRoles={allowedRoles} />
+			{/* <CreateUserDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} allowedRoles={allowedRoles} /> */}
 
 			{/* Dialog asignar rol */}
 			<Dialog open={isAssignRoleOpen} onOpenChange={setIsAssignRoleOpen}>

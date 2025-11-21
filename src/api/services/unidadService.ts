@@ -1,208 +1,250 @@
 /**
  * Servicio de API para gestión de Unidades (Flota)
- * Endpoints: GET, POST, PUT, DELETE unidades
+ * Base URL: https://waldoz-001-site1.stempurl.com/api/Unidades
  */
-
-export interface UnidadResponseDto {
-	Id: number;
-	NumeroEconomico: string;
-	Placas: string;
-	Marca?: string;
-	Modelo?: string;
-	Año?: number;
-	TipoUnidad: string;
-	CapacidadAsientos: number;
-	TieneClimatizacion: boolean;
-	TieneBaño: boolean;
-	TieneWifi: boolean;
-	UrlFoto?: string;
-	Estatus: number;
-	FechaAlta: string;
-}
-
-export interface CreateUnidadDto {
-	NumeroEconomico: string;
-	Placas: string;
-	Marca?: string;
-	Modelo?: string;
-	Año?: number;
-	TipoUnidad: string;
-	CapacidadAsientos: number;
-	TieneClimatizacion: boolean;
-	TieneBaño: boolean;
-	TieneWifi: boolean;
-	UrlFoto?: string;
-	Estatus: number;
-}
-
-export interface UpdateUnidadDto {
-	NumeroEconomico: string;
-	Placas: string;
-	Marca?: string;
-	Modelo?: string;
-	Año?: number;
-	TipoUnidad: string;
-	CapacidadAsientos: number;
-	TieneClimatizacion: boolean;
-	TieneBaño: boolean;
-	TieneWifi: boolean;
-	UrlFoto?: string;
-	Estatus: number;
-}
 
 const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Unidades";
 
+/**
+ * Obtener el token de autenticación del localStorage
+ */
 const getToken = (): string | null => {
 	return localStorage.getItem("token");
 };
 
-const getHeaders = () => ({
-	"Content-Type": "application/json",
-	Accept: "application/json, text/plain",
-	Authorization: `Bearer ${getToken()}`,
-});
+const getHeaders = () => {
+	const token = getToken();
+	const headers: Record<string, string> = {
+		"Content-Type": "application/json",
+	};
+	if (token) headers.Authorization = `Bearer ${token}`;
+	return headers;
+};
+
+const handleResponse = async (response: Response) => {
+	if (!response.ok) {
+		let parsed: any;
+		try {
+			parsed = await response.json();
+		} catch (_e) {
+			try {
+				parsed = { title: await response.text() };
+			} catch {
+				parsed = null;
+			}
+		}
+		console.error("API Error:", parsed || response.statusText);
+		throw {
+			status: response.status,
+			statusText: response.statusText,
+			...(parsed || {}),
+		};
+	}
+	const text = await response.text();
+	return text ? JSON.parse(text) : null;
+};
+
+// ==================== TIPOS ====================
+
+export interface UnidadDto {
+	id: number;
+	numeroEconomico: string;
+	placas: string;
+	marca: string;
+	modelo: string;
+	año: number;
+	tipoUnidad: string;
+	capacidadAsientos: number;
+	tieneClimatizacion: boolean;
+	tieneBaño: boolean;
+	tieneWifi: boolean;
+	urlFoto: string;
+	estatus: number;
+	fechaAlta: string;
+}
+
+export interface CreateUnidadDto {
+	numeroEconomico: string;
+	placas: string;
+	marca: string;
+	modelo: string;
+	año: number;
+	tipoUnidad: string;
+	capacidadAsientos: number;
+	tieneClimatizacion: boolean;
+	tieneBaño: boolean;
+	tieneWifi: boolean;
+	urlFoto?: string;
+	estatus: number;
+}
+
+export interface UpdateUnidadDto {
+	numeroEconomico: string;
+	placas: string;
+	marca: string;
+	modelo: string;
+	año: number;
+	tipoUnidad: string;
+	capacidadAsientos: number;
+	tieneClimatizacion: boolean;
+	tieneBaño: boolean;
+	tieneWifi: boolean;
+	urlFoto?: string;
+	estatus: number;
+}
+
+export interface UnidadesFilterParams {
+	activos?: boolean;
+	search?: string;
+}
+
+// ==================== FUNCIONES ====================
 
 /**
- * Obtiene todas las unidades
+ * GET /api/Unidades
+ * Obtener todas las unidades con filtros opcionales
+ * @param filters - Filtros opcionales (activos, search)
  */
-const getAll = async (): Promise<{ success: boolean; message: string; data: UnidadResponseDto[] }> => {
-	const response = await fetch(BASE_URL, {
+const getAll = async (filters?: UnidadesFilterParams): Promise<UnidadDto[]> => {
+	console.log("[UnidadesService] Fetching unidades with filters:", filters);
+
+	const params = new URLSearchParams();
+	if (filters?.activos !== undefined) params.append("activos", String(filters.activos));
+	if (filters?.search) params.append("search", filters.search);
+
+	const url = params.toString() ? `${BASE_URL}?${params}` : BASE_URL;
+
+	const response = await fetch(url, {
 		method: "GET",
 		headers: getHeaders(),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = "Error al obtener las unidades";
-		throw error;
-	}
+	const data = await handleResponse(response);
+	console.log("[UnidadesService] Unidades received:", Array.isArray(data) ? data.length : data ? 1 : 0);
 
-	const body = await response.json();
-	// Si backend devuelve array directo
-	if (Array.isArray(body)) {
-		return {
-			success: true,
-			message: "Unidades obtenidas exitosamente",
-			data: body,
-		};
-	}
-	return body;
+	return Array.isArray(data) ? data : [];
 };
 
 /**
- * Obtiene una unidad por ID
+ * GET /api/Unidades/{id}
+ * Obtener una unidad por ID
  */
-const getById = async (id: number): Promise<{ success: boolean; message: string; data: UnidadResponseDto }> => {
+const getById = async (id: number): Promise<UnidadDto> => {
+	console.log("[UnidadesService] Fetching unidad by ID:", id);
+
 	const response = await fetch(`${BASE_URL}/${id}`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
 
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = response.status === 404 ? "Unidad no encontrada" : "Error al obtener la unidad";
-		throw error;
-	}
-	return response.json();
+	return await handleResponse(response);
 };
 
 /**
- * Crea una nueva unidad
+ * POST /api/Unidades
+ * Crear una nueva unidad
  */
-const create = async (
-	data: CreateUnidadDto,
-): Promise<{ success: boolean; message: string; data: UnidadResponseDto }> => {
-	// Validación básica
-	if (
-		!data.NumeroEconomico ||
-		!data.Placas ||
-		!data.TipoUnidad ||
-		typeof data.CapacidadAsientos !== "number" ||
-		typeof data.Estatus !== "number"
-	) {
-		const error: any = new Error("Campos obligatorios faltantes");
-		error.status = 400;
-		throw error;
+const create = async (payload: CreateUnidadDto): Promise<UnidadDto> => {
+	console.log("[UnidadesService] Creating unidad with payload:", payload);
+
+	// Validaciones cliente
+	if (!payload || typeof payload !== "object") {
+		console.error("[UnidadesService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
 	}
-	const payload = { ...data };
+
+	if (!payload.numeroEconomico || payload.numeroEconomico.trim() === "") {
+		throw { status: 400, message: "El número económico es requerido.", details: { field: "numeroEconomico" } };
+	}
+
+	if (!payload.placas || payload.placas.trim() === "") {
+		throw { status: 400, message: "Las placas son requeridas.", details: { field: "placas" } };
+	}
+
+	if (!payload.tipoUnidad || payload.tipoUnidad.trim() === "") {
+		throw { status: 400, message: "El tipo de unidad es requerido.", details: { field: "tipoUnidad" } };
+	}
+
+	if (typeof payload.capacidadAsientos !== "number" || payload.capacidadAsientos <= 0) {
+		throw {
+			status: 400,
+			message: "La capacidad de asientos debe ser un número mayor a 0.",
+			details: { field: "capacidadAsientos" },
+		};
+	}
+
 	const response = await fetch(BASE_URL, {
 		method: "POST",
 		headers: getHeaders(),
 		body: JSON.stringify(payload),
 	});
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		try {
-			const errorData = await response.json();
-			error.message = errorData.message || "Error al crear la unidad";
-		} catch {
-			error.message = "Error al crear la unidad";
-		}
-		throw error;
-	}
-	return response.json();
+
+	return await handleResponse(response);
 };
 
 /**
- * Actualiza una unidad existente
+ * PUT /api/Unidades/{id}
+ * Actualizar una unidad existente
  */
-const update = async (id: number, data: UpdateUnidadDto): Promise<void> => {
-	// Validación básica
-	if (
-		!data.NumeroEconomico ||
-		!data.Placas ||
-		!data.TipoUnidad ||
-		typeof data.CapacidadAsientos !== "number" ||
-		typeof data.Estatus !== "number"
-	) {
-		const error: any = new Error("Campos obligatorios faltantes");
-		error.status = 400;
-		throw error;
+const update = async (id: number, payload: UpdateUnidadDto): Promise<void> => {
+	console.log("[UnidadesService] Updating unidad with payload:", id, payload);
+
+	// Validaciones cliente
+	if (!payload || typeof payload !== "object") {
+		console.error("[UnidadesService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
 	}
-	const payload = { ...data };
+
+	if (!payload.numeroEconomico || payload.numeroEconomico.trim() === "") {
+		throw { status: 400, message: "El número económico es requerido.", details: { field: "numeroEconomico" } };
+	}
+
+	if (!payload.placas || payload.placas.trim() === "") {
+		throw { status: 400, message: "Las placas son requeridas.", details: { field: "placas" } };
+	}
+
+	if (!payload.tipoUnidad || payload.tipoUnidad.trim() === "") {
+		throw { status: 400, message: "El tipo de unidad es requerido.", details: { field: "tipoUnidad" } };
+	}
+
+	if (typeof payload.capacidadAsientos !== "number" || payload.capacidadAsientos <= 0) {
+		throw {
+			status: 400,
+			message: "La capacidad de asientos debe ser un número mayor a 0.",
+			details: { field: "capacidadAsientos" },
+		};
+	}
+
 	const response = await fetch(`${BASE_URL}/${id}`, {
 		method: "PUT",
 		headers: getHeaders(),
 		body: JSON.stringify(payload),
 	});
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		try {
-			const errorData = await response.json();
-			error.message = errorData.message || "Error al actualizar la unidad";
-		} catch {
-			error.message = "Error al actualizar la unidad";
-		}
-		throw error;
-	}
-	// NoContent, no retorna nada
+
+	await handleResponse(response);
 };
 
 /**
- * Elimina una unidad
+ * DELETE /api/Unidades/{id}
+ * Eliminar una unidad
  */
 const deleteUnidad = async (id: number): Promise<void> => {
+	console.log("[UnidadesService] Deleting unidad:", id);
+
 	const response = await fetch(`${BASE_URL}/${id}`, {
 		method: "DELETE",
 		headers: getHeaders(),
 	});
-	if (!response.ok) {
-		const error: any = new Error();
-		error.status = response.status;
-		error.message = response.status === 404 ? "Unidad no encontrada" : "Error al eliminar la unidad";
-		throw error;
-	}
-	// NoContent, no retorna nada
+
+	await handleResponse(response);
 };
 
-export const unidadService = {
+const unidadService = {
 	getAll,
 	getById,
 	create,
 	update,
 	delete: deleteUnidad,
 };
+
+export default unidadService;

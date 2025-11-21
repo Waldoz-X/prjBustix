@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bus, CheckCircle2, Loader2, Pencil, Plus, Search, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { CreateUnidadDto, UnidadResponseDto, UpdateUnidadDto } from "@/api/services/unidadService";
-import { unidadService } from "@/api/services/unidadService";
+import type { CreateUnidadDto, UnidadDto, UpdateUnidadDto } from "@/api/services/unidadService";
+import unidadService from "@/api/services/unidadService";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -26,7 +26,7 @@ export default function FleetPage() {
 	// Estados para crear/editar unidad
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [selectedUnidad, setSelectedUnidad] = useState<UnidadResponseDto | null>(null);
+	const [selectedUnidad, setSelectedUnidad] = useState<UnidadDto | null>(null);
 	const ESTATUS_OPTIONS = [
 		{ value: 1, label: "Activo" },
 		{ value: 2, label: "Inactivo" },
@@ -34,18 +34,18 @@ export default function FleetPage() {
 	];
 
 	const initialUnidad: CreateUnidadDto = {
-		NumeroEconomico: "",
-		Placas: "",
-		Marca: "",
-		Modelo: "",
-		Año: undefined,
-		TipoUnidad: "",
-		CapacidadAsientos: 0,
-		TieneClimatizacion: false,
-		TieneBaño: false,
-		TieneWifi: false,
-		UrlFoto: "",
-		Estatus: 1,
+		numeroEconomico: "",
+		placas: "",
+		marca: "",
+		modelo: "",
+		año: 0,
+		tipoUnidad: "",
+		capacidadAsientos: 0,
+		tieneClimatizacion: false,
+		tieneBaño: false,
+		tieneWifi: false,
+		urlFoto: "",
+		estatus: 1,
 	};
 	const [newUnidad, setNewUnidad] = useState<CreateUnidadDto>({ ...initialUnidad });
 	const [editUnidad, setEditUnidad] = useState<UpdateUnidadDto>({ ...initialUnidad });
@@ -61,38 +61,23 @@ export default function FleetPage() {
 	});
 
 	// Normaliza los datos para compatibilidad con backend (propiedades minúsculas)
-	const unidadesRaw = (unidadesResponse?.data ?? []).map((unidad: any) => ({
-		Id: unidad.id ?? unidad.Id,
-		NumeroEconomico: unidad.numeroEconomico ?? unidad.NumeroEconomico,
-		Placas: unidad.placas ?? unidad.Placas,
-		Marca: unidad.marca ?? unidad.Marca,
-		Modelo: unidad.modelo ?? unidad.Modelo,
-		Año: unidad.año ?? unidad.Año,
-		TipoUnidad: unidad.tipoUnidad ?? unidad.TipoUnidad,
-		CapacidadAsientos: unidad.capacidadAsientos ?? unidad.CapacidadAsientos,
-		TieneClimatizacion: unidad.tieneClimatizacion ?? unidad.TieneClimatizacion,
-		TieneBaño: unidad.tieneBaño ?? unidad.TieneBaño,
-		TieneWifi: unidad.tieneWifi ?? unidad.TieneWifi,
-		UrlFoto: unidad.urlFoto ?? unidad.UrlFoto,
-		Estatus: unidad.estatus ?? unidad.Estatus,
-		FechaAlta: unidad.fechaAlta ?? unidad.FechaAlta,
-	}));
+	const unidadesRaw = Array.isArray(unidadesResponse) ? unidadesResponse : [];
 
 	// Filtrado por buscador
 	const unidades = searchTerm.trim()
 		? unidadesRaw.filter(
 				(u) =>
-					u.NumeroEconomico.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					u.Placas.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(u.Marca ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(u.Modelo ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
+					u.numeroEconomico.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					u.placas.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					(u.marca ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+					(u.modelo ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
 			)
 		: unidadesRaw;
 
 	// Estadísticas
 	const totalUnidades = unidadesRaw.length;
-	const activas = unidadesRaw.filter((u) => u.Estatus === 1).length;
-	const inactivas = unidadesRaw.filter((u) => u.Estatus !== 1).length;
+	const activas = unidadesRaw.filter((u) => u.estatus === 1).length;
+	const inactivas = unidadesRaw.filter((u) => u.estatus !== 1).length;
 
 	// Mutation para crear unidad
 	const createMutation = useMutation({
@@ -137,44 +122,44 @@ export default function FleetPage() {
 
 	// Handlers
 	const handleCreate = () => {
-		if (!newUnidad.NumeroEconomico.trim()) {
+		if (!newUnidad.numeroEconomico.trim()) {
 			toast.error("El número económico es obligatorio");
 			return;
 		}
-		if (!newUnidad.Placas.trim()) {
+		if (!newUnidad.placas.trim()) {
 			toast.error("Las placas son obligatorias");
 			return;
 		}
-		if (!newUnidad.TipoUnidad.trim()) {
+		if (!newUnidad.tipoUnidad.trim()) {
 			toast.error("El tipo de unidad es obligatorio");
 			return;
 		}
-		if (!newUnidad.CapacidadAsientos || newUnidad.CapacidadAsientos <= 0) {
+		if (!newUnidad.capacidadAsientos || newUnidad.capacidadAsientos <= 0) {
 			toast.error("La capacidad de asientos debe ser mayor a 0");
 			return;
 		}
-		if (!ESTATUS_OPTIONS.some((opt) => opt.value === newUnidad.Estatus)) {
+		if (!ESTATUS_OPTIONS.some((opt) => opt.value === newUnidad.estatus)) {
 			toast.error("Selecciona un estatus válido");
 			return;
 		}
 		createMutation.mutate(newUnidad);
 	};
 
-	const handleEdit = (unidad: any) => {
+	const handleEdit = (unidad: UnidadDto) => {
 		setSelectedUnidad(unidad);
 		setEditUnidad({
-			NumeroEconomico: unidad.NumeroEconomico ?? "",
-			Placas: unidad.Placas ?? "",
-			Marca: unidad.Marca ?? "",
-			Modelo: unidad.Modelo ?? "",
-			Año: unidad.Año,
-			TipoUnidad: unidad.TipoUnidad ?? "",
-			CapacidadAsientos: unidad.CapacidadAsientos ?? 0,
-			TieneClimatizacion: unidad.TieneClimatizacion ?? false,
-			TieneBaño: unidad.TieneBaño ?? false,
-			TieneWifi: unidad.TieneWifi ?? false,
-			UrlFoto: unidad.UrlFoto ?? "",
-			Estatus: unidad.Estatus ?? 1,
+			numeroEconomico: unidad.numeroEconomico ?? "",
+			placas: unidad.placas ?? "",
+			marca: unidad.marca ?? "",
+			modelo: unidad.modelo ?? "",
+			año: unidad.año,
+			tipoUnidad: unidad.tipoUnidad ?? "",
+			capacidadAsientos: unidad.capacidadAsientos ?? 0,
+			tieneClimatizacion: unidad.tieneClimatizacion ?? false,
+			tieneBaño: unidad.tieneBaño ?? false,
+			tieneWifi: unidad.tieneWifi ?? false,
+			urlFoto: unidad.urlFoto ?? "",
+			estatus: unidad.estatus ?? 1,
 		});
 		setIsEditOpen(true);
 	};
@@ -184,32 +169,32 @@ export default function FleetPage() {
 			toast.error("No hay unidad seleccionada");
 			return;
 		}
-		if (!editUnidad.NumeroEconomico.trim()) {
+		if (!editUnidad.numeroEconomico.trim()) {
 			toast.error("El número económico es obligatorio");
 			return;
 		}
-		if (!editUnidad.Placas.trim()) {
+		if (!editUnidad.placas.trim()) {
 			toast.error("Las placas son obligatorias");
 			return;
 		}
-		if (!editUnidad.TipoUnidad.trim()) {
+		if (!editUnidad.tipoUnidad.trim()) {
 			toast.error("El tipo de unidad es obligatorio");
 			return;
 		}
-		if (!editUnidad.CapacidadAsientos || editUnidad.CapacidadAsientos <= 0) {
+		if (!editUnidad.capacidadAsientos || editUnidad.capacidadAsientos <= 0) {
 			toast.error("La capacidad de asientos debe ser mayor a 0");
 			return;
 		}
-		if (!ESTATUS_OPTIONS.some((opt) => opt.value === editUnidad.Estatus)) {
+		if (!ESTATUS_OPTIONS.some((opt) => opt.value === editUnidad.estatus)) {
 			toast.error("Selecciona un estatus válido");
 			return;
 		}
-		updateMutation.mutate({ id: selectedUnidad.Id, data: editUnidad });
+		updateMutation.mutate({ id: selectedUnidad.id, data: editUnidad });
 	};
 
-	const handleDelete = (unidad: UnidadResponseDto) => {
-		if (window.confirm(`¿Eliminar la unidad "${unidad.NumeroEconomico}"?`)) {
-			deleteMutation.mutate(unidad.Id);
+	const handleDelete = (unidad: UnidadDto) => {
+		if (window.confirm(`¿Eliminar la unidad "${unidad.numeroEconomico}"?`)) {
+			deleteMutation.mutate(unidad.id);
 		}
 	};
 
@@ -238,80 +223,78 @@ export default function FleetPage() {
 						<div className="space-y-4 py-4">
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-2">
-									<Label htmlFor="NumeroEconomico">Número Económico</Label>
+									<Label htmlFor="numeroEconomico">Número Económico</Label>
 									<Input
-										id="NumeroEconomico"
-										value={newUnidad.NumeroEconomico}
-										onChange={(e) => setNewUnidad({ ...newUnidad, NumeroEconomico: e.target.value })}
+										id="numeroEconomico"
+										value={newUnidad.numeroEconomico}
+										onChange={(e) => setNewUnidad({ ...newUnidad, numeroEconomico: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Placas">Placas</Label>
+									<Label htmlFor="placas">Placas</Label>
 									<Input
-										id="Placas"
-										value={newUnidad.Placas}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Placas: e.target.value })}
+										id="placas"
+										value={newUnidad.placas}
+										onChange={(e) => setNewUnidad({ ...newUnidad, placas: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Marca">Marca</Label>
+									<Label htmlFor="marca">Marca</Label>
 									<Input
-										id="Marca"
-										value={newUnidad.Marca ?? ""}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Marca: e.target.value })}
+										id="marca"
+										value={newUnidad.marca ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, marca: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Modelo">Modelo</Label>
+									<Label htmlFor="modelo">Modelo</Label>
 									<Input
-										id="Modelo"
-										value={newUnidad.Modelo ?? ""}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Modelo: e.target.value })}
+										id="modelo"
+										value={newUnidad.modelo ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, modelo: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Año">Año</Label>
+									<Label htmlFor="año">Año</Label>
 									<Input
-										id="Año"
+										id="año"
 										type="number"
-										value={newUnidad.Año ?? ""}
-										onChange={(e) =>
-											setNewUnidad({ ...newUnidad, Año: e.target.value ? parseInt(e.target.value) : undefined })
-										}
+										value={newUnidad.año ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, año: e.target.value ? parseInt(e.target.value) : 0 })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="TipoUnidad">Tipo de Unidad</Label>
+									<Label htmlFor="tipoUnidad">Tipo de Unidad</Label>
 									<Input
-										id="TipoUnidad"
-										value={newUnidad.TipoUnidad}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TipoUnidad: e.target.value })}
+										id="tipoUnidad"
+										value={newUnidad.tipoUnidad}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tipoUnidad: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="CapacidadAsientos">Capacidad de Asientos</Label>
+									<Label htmlFor="capacidadAsientos">Capacidad de Asientos</Label>
 									<Input
-										id="CapacidadAsientos"
+										id="capacidadAsientos"
 										type="number"
-										value={newUnidad.CapacidadAsientos}
-										onChange={(e) => setNewUnidad({ ...newUnidad, CapacidadAsientos: parseInt(e.target.value) })}
+										value={newUnidad.capacidadAsientos}
+										onChange={(e) => setNewUnidad({ ...newUnidad, capacidadAsientos: parseInt(e.target.value) })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="UrlFoto">URL Foto</Label>
+									<Label htmlFor="urlFoto">URL Foto</Label>
 									<Input
-										id="UrlFoto"
-										value={newUnidad.UrlFoto ?? ""}
-										onChange={(e) => setNewUnidad({ ...newUnidad, UrlFoto: e.target.value })}
+										id="urlFoto"
+										value={newUnidad.urlFoto ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, urlFoto: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Estatus">Estatus</Label>
+									<Label htmlFor="estatus">Estatus</Label>
 									<select
-										id="Estatus"
+										id="estatus"
 										className="w-full border rounded px-2 py-2"
-										value={newUnidad.Estatus}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Estatus: Number(e.target.value) })}
+										value={newUnidad.estatus}
+										onChange={(e) => setNewUnidad({ ...newUnidad, estatus: Number(e.target.value) })}
 									>
 										{ESTATUS_OPTIONS.map((opt) => (
 											<option key={opt.value} value={opt.value}>
@@ -323,30 +306,30 @@ export default function FleetPage() {
 							</div>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
 								<div className="flex items-center gap-2">
-									<Label htmlFor="TieneClimatizacion">Climatización</Label>
+									<Label htmlFor="tieneClimatizacion">Climatización</Label>
 									<Input
-										id="TieneClimatizacion"
+										id="tieneClimatizacion"
 										type="checkbox"
-										checked={newUnidad.TieneClimatizacion}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TieneClimatizacion: e.target.checked })}
+										checked={newUnidad.tieneClimatizacion}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tieneClimatizacion: e.target.checked })}
 									/>
 								</div>
 								<div className="flex items-center gap-2">
-									<Label htmlFor="TieneBaño">Baño</Label>
+									<Label htmlFor="tieneBaño">Baño</Label>
 									<Input
-										id="TieneBaño"
+										id="tieneBaño"
 										type="checkbox"
-										checked={newUnidad.TieneBaño}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TieneBaño: e.target.checked })}
+										checked={newUnidad.tieneBaño}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tieneBaño: e.target.checked })}
 									/>
 								</div>
 								<div className="flex items-center gap-2">
-									<Label htmlFor="TieneWifi">WiFi</Label>
+									<Label htmlFor="tieneWifi">WiFi</Label>
 									<Input
-										id="TieneWifi"
+										id="tieneWifi"
 										type="checkbox"
-										checked={newUnidad.TieneWifi}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TieneWifi: e.target.checked })}
+										checked={newUnidad.tieneWifi}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tieneWifi: e.target.checked })}
 									/>
 								</div>
 							</div>
@@ -430,15 +413,15 @@ export default function FleetPage() {
 					{unidades && unidades.length > 0 ? (
 						unidades.map((unidad) => (
 							<Card
-								key={unidad.Id}
+								key={unidad.id}
 								className="group hover:shadow-lg transition-all duration-200 hover:border-primary/50"
 							>
 								{/* Imagen del camión */}
 								<div className="w-full flex justify-center items-center pt-4">
-									{unidad.UrlFoto ? (
+									{unidad.urlFoto ? (
 										<img
-											src={unidad.UrlFoto}
-											alt={`Foto de ${unidad.NumeroEconomico}`}
+											src={unidad.urlFoto}
+											alt={`Foto de ${unidad.numeroEconomico}`}
 											className="h-32 w-auto object-contain rounded-md border"
 											onError={(e) => {
 												e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/2928/2928889.png";
@@ -452,47 +435,47 @@ export default function FleetPage() {
 								<CardHeader className="pb-3 pt-2">
 									<div className="flex items-center gap-3">
 										<div>
-											<CardTitle className="text-lg leading-none">{unidad.NumeroEconomico}</CardTitle>
+											<CardTitle className="text-lg leading-none">{unidad.numeroEconomico}</CardTitle>
 											<Badge variant="secondary" className="mt-1.5 text-xs">
-												{unidad.TipoUnidad}
+												{unidad.tipoUnidad}
 											</Badge>
 										</div>
 									</div>
-									<CardDescription>ID: {unidad.Id}</CardDescription>
+									<CardDescription>ID: {unidad.id}</CardDescription>
 								</CardHeader>
 								<CardContent className="space-y-3">
 									<div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground">
 										<div className="flex gap-2">
-											<span className="font-semibold">Placas:</span> <Badge variant="secondary">{unidad.Placas}</Badge>
+											<span className="font-semibold">Placas:</span> <Badge variant="secondary">{unidad.placas}</Badge>
 										</div>
 										<div>
-											<span className="font-semibold">Marca:</span> {unidad.Marca ?? "-"}
+											<span className="font-semibold">Marca:</span> {unidad.marca ?? "-"}
 										</div>
 										<div>
-											<span className="font-semibold">Modelo:</span> {unidad.Modelo ?? "-"}
+											<span className="font-semibold">Modelo:</span> {unidad.modelo ?? "-"}
 										</div>
 										<div>
-											<span className="font-semibold">Año:</span> {unidad.Año ?? "-"}
+											<span className="font-semibold">Año:</span> {unidad.año ?? "-"}
 										</div>
 										<div>
-											<span className="font-semibold">Asientos:</span> {unidad.CapacidadAsientos}
+											<span className="font-semibold">Asientos:</span> {unidad.capacidadAsientos}
 										</div>
 										<div>
-											<span className="font-semibold">Clima:</span> {unidad.TieneClimatizacion ? "Sí" : "No"}
+											<span className="font-semibold">Clima:</span> {unidad.tieneClimatizacion ? "Sí" : "No"}
 										</div>
 										<div>
-											<span className="font-semibold">Baño:</span> {unidad.TieneBaño ? "Sí" : "No"}
+											<span className="font-semibold">Baño:</span> {unidad.tieneBaño ? "Sí" : "No"}
 										</div>
 										<div>
-											<span className="font-semibold">WiFi:</span> {unidad.TieneWifi ? "Sí" : "No"}
+											<span className="font-semibold">WiFi:</span> {unidad.tieneWifi ? "Sí" : "No"}
 										</div>
 										<div>
 											<span className="font-semibold">Estatus:</span>{" "}
-											{ESTATUS_OPTIONS.find((opt) => opt.value === unidad.Estatus)?.label ?? unidad.Estatus}
+											{ESTATUS_OPTIONS.find((opt) => opt.value === unidad.estatus)?.label ?? unidad.estatus}
 										</div>
 										<div>
 											<span className="font-semibold">Alta:</span>{" "}
-											{unidad.FechaAlta ? new Date(unidad.FechaAlta).toLocaleDateString() : "-"}
+											{unidad.fechaAlta ? new Date(unidad.fechaAlta).toLocaleDateString() : "-"}
 										</div>
 									</div>
 									<div className="flex gap-2 pt-2">
@@ -543,7 +526,7 @@ export default function FleetPage() {
 					<DialogHeader>
 						<DialogTitle>Editar Unidad</DialogTitle>
 						<DialogDescription>
-							Modifica los datos de la unidad "{selectedUnidad ? selectedUnidad.NumeroEconomico : ""}"
+							Modifica los datos de la unidad "{selectedUnidad ? selectedUnidad.numeroEconomico : ""}"
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -552,32 +535,32 @@ export default function FleetPage() {
 								<Label htmlFor="editNumeroEconomico">Número Económico</Label>
 								<Input
 									id="editNumeroEconomico"
-									value={editUnidad.NumeroEconomico}
-									onChange={(e) => setEditUnidad({ ...editUnidad, NumeroEconomico: e.target.value })}
+									value={editUnidad.numeroEconomico}
+									onChange={(e) => setEditUnidad({ ...editUnidad, numeroEconomico: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editPlacas">Placas</Label>
 								<Input
 									id="editPlacas"
-									value={editUnidad.Placas}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Placas: e.target.value })}
+									value={editUnidad.placas}
+									onChange={(e) => setEditUnidad({ ...editUnidad, placas: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editMarca">Marca</Label>
 								<Input
 									id="editMarca"
-									value={editUnidad.Marca ?? ""}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Marca: e.target.value })}
+									value={editUnidad.marca ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, marca: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editModelo">Modelo</Label>
 								<Input
 									id="editModelo"
-									value={editUnidad.Modelo ?? ""}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Modelo: e.target.value })}
+									value={editUnidad.modelo ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, modelo: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
@@ -585,18 +568,16 @@ export default function FleetPage() {
 								<Input
 									id="editAño"
 									type="number"
-									value={editUnidad.Año ?? ""}
-									onChange={(e) =>
-										setEditUnidad({ ...editUnidad, Año: e.target.value ? parseInt(e.target.value) : undefined })
-									}
+									value={editUnidad.año ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, año: e.target.value ? parseInt(e.target.value) : 0 })}
 								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editTipoUnidad">Tipo de Unidad</Label>
 								<Input
 									id="editTipoUnidad"
-									value={editUnidad.TipoUnidad}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TipoUnidad: e.target.value })}
+									value={editUnidad.tipoUnidad}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tipoUnidad: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
@@ -604,16 +585,16 @@ export default function FleetPage() {
 								<Input
 									id="editCapacidadAsientos"
 									type="number"
-									value={editUnidad.CapacidadAsientos}
-									onChange={(e) => setEditUnidad({ ...editUnidad, CapacidadAsientos: parseInt(e.target.value) })}
+									value={editUnidad.capacidadAsientos}
+									onChange={(e) => setEditUnidad({ ...editUnidad, capacidadAsientos: parseInt(e.target.value) })}
 								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editUrlFoto">URL Foto</Label>
 								<Input
 									id="editUrlFoto"
-									value={editUnidad.UrlFoto ?? ""}
-									onChange={(e) => setEditUnidad({ ...editUnidad, UrlFoto: e.target.value })}
+									value={editUnidad.urlFoto ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, urlFoto: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
@@ -621,8 +602,8 @@ export default function FleetPage() {
 								<select
 									id="editEstatus"
 									className="w-full border rounded px-2 py-2"
-									value={editUnidad.Estatus}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Estatus: Number(e.target.value) })}
+									value={editUnidad.estatus}
+									onChange={(e) => setEditUnidad({ ...editUnidad, estatus: Number(e.target.value) })}
 								>
 									{ESTATUS_OPTIONS.map((opt) => (
 										<option key={opt.value} value={opt.value}>
@@ -638,8 +619,8 @@ export default function FleetPage() {
 								<Input
 									id="editTieneClimatizacion"
 									type="checkbox"
-									checked={editUnidad.TieneClimatizacion}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TieneClimatizacion: e.target.checked })}
+									checked={editUnidad.tieneClimatizacion}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tieneClimatizacion: e.target.checked })}
 								/>
 							</div>
 							<div className="flex items-center gap-2">
@@ -647,8 +628,8 @@ export default function FleetPage() {
 								<Input
 									id="editTieneBaño"
 									type="checkbox"
-									checked={editUnidad.TieneBaño}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TieneBaño: e.target.checked })}
+									checked={editUnidad.tieneBaño}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tieneBaño: e.target.checked })}
 								/>
 							</div>
 							<div className="flex items-center gap-2">
@@ -656,8 +637,8 @@ export default function FleetPage() {
 								<Input
 									id="editTieneWifi"
 									type="checkbox"
-									checked={editUnidad.TieneWifi}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TieneWifi: e.target.checked })}
+									checked={editUnidad.tieneWifi}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tieneWifi: e.target.checked })}
 								/>
 							</div>
 						</div>
