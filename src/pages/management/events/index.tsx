@@ -166,8 +166,8 @@ export default function EventosPage() {
 				break;
 			}
 			case "fechaHora": {
-				const date = value && value.date ? value.date : formData.fecha;
-				const time = value && value.time ? value.time : formData.hora;
+				const date = value?.date ? value.date : formData.fecha;
+				const time = value?.time ? value.time : formData.hora;
 				if (!date) errors.fecha = "La fecha es requerida.";
 				else delete errors.fecha;
 				if (!time) errors.hora = "La hora es requerida.";
@@ -455,7 +455,7 @@ export default function EventosPage() {
 					horaStr = s.length >= 5 ? s.slice(0, 5) : s.padEnd(5, "0");
 				}
 			}
-		} catch (e) {
+		} catch (_e) {
 			horaStr = "19:00";
 		}
 

@@ -484,7 +484,7 @@ export default function UsersPage() {
 		try {
 			const info = await userService.getLockoutInfo(user.id);
 			setLockoutInfo(info);
-		} catch (error) {
+		} catch (_error) {
 			setLockoutInfo(null);
 		}
 	};
@@ -1126,7 +1126,7 @@ export default function UsersPage() {
 							</div>
 							<div className="pl-6">
 								<div className="flex gap-2 flex-wrap">
-									{userDetails && userDetails.roles && userDetails.roles.length > 0 ? (
+									{userDetails?.roles && userDetails.roles.length > 0 ? (
 										userDetails.roles.map((role) => (
 											<Badge key={role} variant="secondary" className="text-xs">
 												<ShieldCheck className="h-3 w-3 mr-1" />
@@ -1141,7 +1141,7 @@ export default function UsersPage() {
 						</div>
 
 						{/* Información de Bloqueo (si aplica) */}
-						{lockoutInfo && lockoutInfo.isLockedOut && (
+						{lockoutInfo?.isLockedOut && (
 							<>
 								<div className="border-t pt-4" />
 								<div className="space-y-4">

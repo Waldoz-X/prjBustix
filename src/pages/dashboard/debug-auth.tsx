@@ -33,7 +33,7 @@ export default function DebugAuth() {
 				</CardHeader>
 				<CardContent>
 					<pre className="text-xs overflow-auto break-all">
-						{accessToken ? accessToken.substring(0, 100) + "..." : "No token"}
+						{accessToken ? `${accessToken.substring(0, 100)}...` : "No token"}
 					</pre>
 				</CardContent>
 			</Card>

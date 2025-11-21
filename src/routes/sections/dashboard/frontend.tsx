@@ -4,9 +4,20 @@ import { Component } from "./utils";
 
 export function getFrontendDashboardRoutes(): RouteObject[] {
 	return [
+		// Dashboard y Notificaciones
+		{ path: "dashboard", element: Component("/pages/dashboard") },
+		{ path: "notifications", element: Component("/pages/notifications") },
+
+		// Eventos Masivos
+		{ path: "events", element: Component("/pages/management/events") },
 		{ path: "rutas", element: Component("/pages/rutas") },
+		{ path: "tickets", element: Component("/pages/tickets") },
+		{ path: "analytics/events", element: Component("/pages/analytics/events") },
+
+		// Recursos Operativos
 		{ path: "fleet", element: Component("/pages/unidades") },
-		{ path: "rutas", element: Component("/pages/rutas") },
+		{ path: "calendar-general", element: Component("/pages/calendar/general") },
+		{ path: "incidents", element: Component("/pages/incidents") },
 
 		// Operadores (mapea a src/pages/operators con subrutas)
 		{
@@ -15,13 +26,53 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 				{ index: true, element: <Navigate to="list" replace /> },
 				{ path: "list", element: Component("/pages/operators/list") },
 				{ path: "roles", element: Component("/pages/operators/roles") },
+				{ path: "access", element: Component("/pages/operators/access") },
 			],
 		},
+
+		// Viajes y Operaciones
+		{
+			path: "trips",
+			children: [
+				{ index: true, element: Component("/pages/trips") },
+				{ path: "assigned", element: Component("/pages/trips/assigned") },
+				{ path: "staff-assignment", element: Component("/pages/trips/staff-assignment") },
+				{ path: "checkin", element: Component("/pages/trips/checkin") },
+				{ path: "validation", element: Component("/pages/trips/validation") },
+			],
+		},
+
+		// Finanzas
+		{
+			path: "finance",
+			children: [
+				{ index: true, element: <Navigate to="revenue" replace /> },
+				{ path: "revenue", element: Component("/pages/finance/revenue") },
+				{ path: "payments", element: Component("/pages/finance/payments") },
+				{ path: "reports", element: Component("/pages/finance/reports") },
+			],
+		},
+
+		// Precios y Tarifas
+		{
+			path: "pricing",
+			children: [{ path: "configuration", element: Component("/pages/pricing/configuration") }],
+		},
+
+		// Mi Perfil
+		{
+			path: "profile",
+			children: [
+				{ index: true, element: Component("/pages/profile") },
+				{ path: "tickets", element: Component("/pages/profile/tickets") },
+				{ path: "change-password", element: Component("/pages/profile/change-password") },
+			],
+		},
+
+		// Desarrollo
 		{ path: "workbench", element: Component("/pages/dashboard/workbench") },
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "debug-auth", element: Component("/pages/dashboard/debug-auth") },
-		// Ruta de eventos (viajes)
-		{ path: "events", element: Component("/pages/management/events") },
 		{
 			path: "components",
 			children: [
@@ -75,8 +126,16 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 				},
 				// Ruta de cupones
 				{ path: "cupones", element: Component("/pages/management/cupones") },
-				// Ruta de Viajes (Gestión de Viajes)
-				{ path: "trips", element: Component("/pages/management/trips") },
+			],
+		},
+
+		// Settings (Configuración)
+		{
+			path: "settings",
+			children: [
+				{ index: true, element: Component("/pages/settings") },
+				{ path: "email-confirmation", element: Component("/pages/settings/email-confirmation") },
+				{ path: "audit", element: Component("/pages/settings/audit") },
 			],
 		},
 		{

@@ -30,9 +30,12 @@ import { Badge } from "@/ui/badge";
  */
 
 export const frontendNavData: NavProps["data"] = [
-	// BusTix Modules - Solo para usuarios autenticados
+	// =========================================================================
+	// SECCIÓN 1: DASHBOARD Y NOTIFICACIONES
+	// Acceso: Todos los roles autenticados
+	// =========================================================================
 	{
-		name: "BusTix",
+		name: "Principal",
 		items: [
 			{
 				title: "Dashboard",
@@ -49,6 +52,11 @@ export const frontendNavData: NavProps["data"] = [
 			},
 		],
 	},
+
+	// =========================================================================
+	// SECCIÓN 2: EVENTOS MASIVOS
+	// Acceso: Admin, Manager, Operator (limitado)
+	// =========================================================================
 	{
 		name: "Eventos Masivos",
 		items: [
@@ -56,64 +64,73 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Gestión de Eventos",
 				path: "/events",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				auth: ["Admin", "Manager"],
 			},
 			{
 				title: "Rutas Públicas",
 				path: "/rutas",
 				icon: <Icon icon="solar:map-point-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
+				auth: ["Admin", "Manager", "Operator"],
 			},
 			{
 				title: "Boletos Vendidos",
 				path: "/tickets",
 				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				auth: ["Admin", "Manager"],
 			},
 			{
-				title: "Estadísticas Eventos",
+				title: "Estadísticas de Eventos",
 				path: "/analytics/events",
 				icon: <Icon icon="solar:chart-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				auth: ["Admin", "Manager"],
 			},
 		],
 	},
+
+	// =========================================================================
+	// SECCIÓN 3: VIAJES Y OPERACIONES
+	// Acceso: Admin, Manager, Operator, Staff (según asignación)
+	// =========================================================================
 	{
-		name: "Viajes Privados",
+		name: "Viajes y Operaciones",
 		items: [
 			{
-				title: "Cotizaciones",
-				path: "/quotes",
-				icon: <Icon icon="solar:chat-round-money-bold-duotone" size="24" />,
-				info: <Badge variant="warning">3</Badge>,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
-			},
-			{
-				title: "Reservas Privadas",
-				path: "/bookings/private",
-				icon: <Icon icon="solar:case-round-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
-			},
-			{
-				title: "Clientes Corporativos",
-				path: "/corporate",
-				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
-			},
-			{
-				title: "Contratos",
-				path: "/contracts",
-				icon: <Icon icon="solar:document-text-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
-			},
-			{
 				title: "Gestión de Viajes",
-				path: "/management/trips",
+				path: "/trips",
 				icon: <Icon icon="solar:bus-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager", "Operator"],
+				auth: ["Admin", "Manager"],
+			},
+			{
+				title: "Mis Viajes Asignados",
+				path: "/trips/assigned",
+				icon: <Icon icon="solar:clipboard-list-bold-duotone" size="24" />,
+				auth: ["Operator", "Staff"],
+			},
+			{
+				title: "Asignación de Staff",
+				path: "/trips/staff-assignment",
+				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"],
+			},
+			{
+				title: "Check-In Progresivo",
+				path: "/trips/checkin",
+				icon: <Icon icon="solar:check-circle-bold-duotone" size="24" />,
+				auth: ["Operator", "Staff"],
+			},
+			{
+				title: "Validación de Boletos",
+				path: "/trips/validation",
+				icon: <Icon icon="solar:ticket-sale-bold-duotone" size="24" />,
+				auth: ["Operator", "Staff"],
 			},
 		],
 	},
+
+	// =========================================================================
+	// SECCIÓN 4: RECURSOS OPERATIVOS
+	// Acceso: Admin, Manager, Operator (limitado)
+	// =========================================================================
 	{
 		name: "Recursos Operativos",
 		items: [
@@ -121,38 +138,48 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Flota de Vehículos",
 				path: "/fleet",
 				icon: <Icon icon="solar:bus-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
+				auth: ["Admin", "Manager", "Operator"],
 			},
 			{
 				title: "Staff y Operadores",
 				path: "/operators",
 				icon: <Icon icon="solar:user-check-rounded-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				auth: ["Admin", "Manager"],
 				children: [
 					{
 						title: "Lista de Operadores",
 						path: "/operators/list",
 					},
 					{
-						title: "Crear Operador",
-						path: "/operators/create",
+						title: "Roles y Permisos",
+						path: "/operators/roles",
+					},
+					{
+						title: "Gestión de Accesos",
+						path: "/operators/access",
+						auth: ["Admin"],
 					},
 				],
 			},
 			{
-				title: "Mantenimientos",
-				path: "/maintenance",
-				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
+				title: "Incidencias",
+				path: "/incidents",
+				icon: <Icon icon="solar:danger-triangle-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager", "Operator", "Staff"],
 			},
 			{
 				title: "Calendario General",
 				path: "/calendar-general",
 				icon: <Icon icon="solar:calendar-mark-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager", "Operator"], // Admin, Manager, Operator
+				auth: ["Admin", "Manager", "Operator"],
 			},
 		],
 	},
+
+	// =========================================================================
+	// SECCIÓN 5: FINANZAS
+	// Acceso: Admin, Manager
+	// =========================================================================
 	{
 		name: "Finanzas",
 		items: [
@@ -160,34 +187,49 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Ingresos y Ventas",
 				path: "/finance/revenue",
 				icon: <Icon icon="solar:dollar-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				auth: ["Admin", "Manager"],
 			},
 			{
-				title: "Facturación CFDI",
-				path: "/invoices",
-				icon: <Icon icon="solar:bill-list-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
-			},
-			{
-				title: "Reportes Financieros",
-				path: "/finance/reports",
-				icon: <Icon icon="solar:chart-2-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
-			},
-			{
-				title: "Servicios Adicionales",
-				path: "/services",
-				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				title: "Pagos",
+				path: "/finance/payments",
+				icon: <Icon icon="solar:card-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"],
 			},
 			{
 				title: "Cupones de Descuento",
 				path: "/management/cupones",
 				icon: <Icon icon="solar:ticket-sale-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				auth: ["Admin", "Manager"],
+			},
+			{
+				title: "Reportes Financieros",
+				path: "/finance/reports",
+				icon: <Icon icon="solar:chart-2-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"],
 			},
 		],
 	},
+
+	// =========================================================================
+	// SECCIÓN 6: PRECIOS Y TARIFAS
+	// Acceso: Admin, Manager
+	// =========================================================================
+	{
+		name: "Precios y Tarifas",
+		items: [
+			{
+				title: "Configuración de Precios",
+				path: "/pricing/configuration",
+				icon: <Icon icon="solar:tag-price-bold-duotone" size="24" />,
+				auth: ["Admin", "Manager"],
+			},
+		],
+	},
+
+	// =========================================================================
+	// SECCIÓN 7: CONFIGURACIÓN Y ADMINISTRACIÓN
+	// Acceso: Admin (principalmente)
+	// =========================================================================
 	{
 		name: "Configuración",
 		items: [
@@ -195,7 +237,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Gestión de Usuarios",
 				path: "/management/users",
 				icon: <Icon icon="solar:users-group-rounded-bold-duotone" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 				children: [
 					{
 						title: "Lista de Usuarios",
@@ -208,151 +250,79 @@ export const frontendNavData: NavProps["data"] = [
 				],
 			},
 			{
-				title: "Precios y Tarifas",
-				path: "/settings/pricing",
-				icon: <Icon icon="solar:tag-price-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager"], // Solo Admin y Manager
+				title: "Confirmación de Email",
+				path: "/settings/email-confirmation",
+				icon: <Icon icon="solar:letter-opened-bold-duotone" size="24" />,
+				auth: ["Admin"],
+			},
+			{
+				title: "Auditoría",
+				path: "/settings/audit",
+				icon: <Icon icon="solar:document-text-bold-duotone" size="24" />,
+				auth: ["Admin"],
 			},
 			{
 				title: "Configuración General",
 				path: "/settings",
 				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 			},
 		],
 	},
-	// Las siguientes secciones son solo para desarrollo/testing - Solo Admin
+
+	// =========================================================================
+	// SECCIÓN 8: MI PERFIL
+	// Acceso: Todos los usuarios autenticados
+	// =========================================================================
 	{
-		name: "sys.nav.dashboard",
+		name: "Mi Perfil",
+		items: [
+			{
+				title: "Mi Perfil",
+				path: "/profile",
+				icon: <Icon icon="solar:user-bold-duotone" size="24" />,
+				// Visible para todos los usuarios autenticados
+			},
+			{
+				title: "Mis Boletos",
+				path: "/profile/tickets",
+				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
+				// Visible para todos los usuarios autenticados
+			},
+			{
+				title: "Cambiar Contraseña",
+				path: "/profile/change-password",
+				icon: <Icon icon="solar:lock-password-bold-duotone" size="24" />,
+				// Visible para todos los usuarios autenticados
+			},
+		],
+	},
+
+	// =========================================================================
+	// SECCIÓN 9: DESARROLLO Y TESTING
+	// Acceso: Solo Admin - Para desarrollo y pruebas
+	// =========================================================================
+	{
+		name: "Desarrollo",
 		items: [
 			{
 				title: "sys.nav.workbench",
 				path: "/workbench",
 				icon: <Icon icon="local:ic-workbench" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 			},
 			{
 				title: "sys.nav.analysis",
 				path: "/analysis",
 				icon: <Icon icon="local:ic-analysis" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 			},
-		],
-	},
-	{
-		name: "sys.nav.pages",
-		items: [
-			// management
-			{
-				title: "sys.nav.management",
-				path: "/management",
-				icon: <Icon icon="local:ic-management" size="24" />,
-				auth: ["Admin"], // Solo Admin
-				children: [
-					{
-						title: "sys.nav.user.index",
-						path: "/management/user",
-						children: [
-							{
-								title: "sys.nav.user.profile",
-								path: "/management/user/profile",
-							},
-							{
-								title: "sys.nav.user.account",
-								path: "/management/user/account",
-							},
-						],
-					},
-					{
-						title: "sys.nav.system.index",
-						path: "/management/system",
-						children: [
-							{
-								title: "sys.nav.system.permission",
-								path: "/management/system/permission",
-							},
-							{
-								title: "sys.nav.system.role",
-								path: "/management/system/role",
-							},
-							{
-								title: "sys.nav.system.user",
-								path: "/management/system/user",
-							},
-						],
-					},
-				],
-			},
-			// menulevel
-			{
-				title: "sys.nav.menulevel.index",
-				path: "/menu_level",
-				icon: <Icon icon="local:ic-menulevel" size="24" />,
-				auth: ["Admin"], // Solo Admin
-				children: [
-					{
-						title: "sys.nav.menulevel.1a",
-						path: "/menu_level/1a",
-					},
-					{
-						title: "sys.nav.menulevel.1b.index",
-						path: "/menu_level/1b",
-						children: [
-							{
-								title: "sys.nav.menulevel.1b.2a",
-								path: "/menu_level/1b/2a",
-							},
-							{
-								title: "sys.nav.menulevel.1b.2b.index",
-								path: "/menu_level/1b/2b",
-								children: [
-									{
-										title: "sys.nav.menulevel.1b.2b.3a",
-										path: "/menu_level/1b/2b/3a",
-									},
-									{
-										title: "sys.nav.menulevel.1b.2b.3b",
-										path: "/menu_level/1b/2b/3b",
-									},
-								],
-							},
-						],
-					},
-				],
-			},
-			// errors
-			{
-				title: "sys.nav.error.index",
-				path: "/error",
-				icon: <Icon icon="bxs:error-alt" size="24" />,
-				auth: ["Admin"], // Solo Admin
-				children: [
-					{
-						title: "sys.nav.error.403",
-						path: "/error/403",
-					},
-					{
-						title: "sys.nav.error.404",
-						path: "/error/404",
-					},
-					{
-						title: "sys.nav.error.500",
-						path: "/error/500",
-					},
-				],
-			},
-		],
-	},
-	{
-		name: "sys.nav.ui",
-		items: [
-			// components
 			{
 				title: "sys.nav.components",
 				path: "/components",
 				icon: <Icon icon="solar:widget-5-bold-duotone" size="24" />,
 				caption: "sys.nav.custom_ui_components",
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 				children: [
 					{
 						title: "sys.nav.icon",
@@ -384,94 +354,30 @@ export const frontendNavData: NavProps["data"] = [
 					},
 				],
 			},
-			// functions
-			{
-				title: "sys.nav.functions",
-				path: "/functions",
-				icon: <Icon icon="solar:plain-2-bold-duotone" size="24" />,
-				children: [
-					{
-						title: "sys.nav.clipboard",
-						path: "/functions/clipboard",
-						auth: ["Admin"], // Solo Admin
-					},
-					{
-						title: "Cerrar Sesión",
-						path: "/functions/token_expired",
-						// Visible para todos los usuarios autenticados
-					},
-				],
-			},
-		],
-	},
-	{
-		name: "sys.nav.others",
-		items: [
 			{
 				title: "sys.nav.permission",
 				path: "/permission",
 				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
-				auth: ["Admin"], // Solo Admin
-			},
-			{
-				title: "sys.nav.permission.page_test",
-				path: "/permission/page-test",
-				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
-				auth: ["Admin"], // Solo Admin
-				hidden: true,
+				auth: ["Admin"],
 			},
 			{
 				title: "sys.nav.calendar",
 				path: "/calendar",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
 				info: <Badge variant="warning">+12</Badge>,
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 			},
 			{
 				title: "sys.nav.kanban",
 				path: "/kanban",
 				icon: <Icon icon="solar:clipboard-bold-duotone" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				auth: ["Admin"],
 			},
 			{
-				title: "sys.nav.disabled",
-				path: "/disabled",
-				icon: <Icon icon="local:ic-disabled" size="24" />,
-				disabled: true,
-			},
-			{
-				title: "sys.nav.label",
-				path: "#label",
-				icon: <Icon icon="local:ic-label" size="24" />,
-				auth: ["Admin"], // Solo Admin
-				info: (
-					<Badge variant="info">
-						<Icon icon="solar:bell-bing-bold-duotone" size={14} />
-						New
-					</Badge>
-				),
-			},
-			{
-				title: "sys.nav.link",
-				path: "/link",
-				icon: <Icon icon="local:ic-external" size="24" />,
-				auth: ["Admin"], // Solo Admin
-				children: [
-					{
-						title: "sys.nav.external_link",
-						path: "/link/external-link",
-					},
-					{
-						title: "sys.nav.iframe",
-						path: "/link/iframe",
-					},
-				],
-			},
-			{
-				title: "sys.nav.blank",
-				path: "/blank",
-				icon: <Icon icon="local:ic-blank" size="24" />,
-				auth: ["Admin"], // Solo Admin
+				title: "Cerrar Sesión",
+				path: "/functions/token_expired",
+				icon: <Icon icon="solar:logout-2-bold-duotone" size="24" />,
+				// Visible para todos los usuarios autenticados
 			},
 		],
 	},

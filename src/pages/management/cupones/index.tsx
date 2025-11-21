@@ -199,8 +199,8 @@ export default function CuponesPage() {
 			...formData,
 			codigo: formData.codigo.trim().toUpperCase(),
 			descripcion: formData.descripcion.trim(),
-			fechaInicio: new Date(formData.fechaInicio + "T00:00:00").toISOString(),
-			fechaExpiracion: new Date(formData.fechaExpiracion + "T23:59:59").toISOString(),
+			fechaInicio: new Date(`${formData.fechaInicio}T00:00:00`).toISOString(),
+			fechaExpiracion: new Date(`${formData.fechaExpiracion}T23:59:59`).toISOString(),
 		} as CreateCuponDto;
 
 		createMutation.mutate(dataToSend);
@@ -278,8 +278,8 @@ export default function CuponesPage() {
 		const dataToSend: UpdateCuponDto = {
 			...formData,
 			descripcion: formData.descripcion.trim(),
-			fechaInicio: new Date(formData.fechaInicio + "T00:00:00").toISOString(),
-			fechaExpiracion: new Date(formData.fechaExpiracion + "T23:59:59").toISOString(),
+			fechaInicio: new Date(`${formData.fechaInicio}T00:00:00`).toISOString(),
+			fechaExpiracion: new Date(`${formData.fechaExpiracion}T23:59:59`).toISOString(),
 		} as UpdateCuponDto;
 
 		updateMutation.mutate({
