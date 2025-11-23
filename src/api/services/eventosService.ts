@@ -310,6 +310,14 @@ const createEvento = async (payload: CreateEventoDto): Promise<EventoDto> => {
 
 	console.log("[EventosService] Final payload (stringified):", JSON.stringify(anyPayload));
 
+	// Convertir HH:mm:ss a Ticks
+	const timeParts = anyPayload.horaInicio.split(":");
+	const hours = parseInt(timeParts[0], 10);
+	const minutes = parseInt(timeParts[1], 10);
+	const seconds = parseInt(timeParts[2], 10);
+	const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+	const ticks = totalSeconds * 10000000;
+
 	// Construir body plano que el API espera (llaves en minúscula)
 	const dtoFromAny = anyPayload.dto ?? anyPayload;
 	const sendBody: any = {
@@ -317,7 +325,7 @@ const createEvento = async (payload: CreateEventoDto): Promise<EventoDto> => {
 		descripcion: dtoFromAny.Descripcion ?? dtoFromAny.descripcion ?? "",
 		tipoEvento: dtoFromAny.TipoEvento ?? dtoFromAny.tipoEvento ?? "",
 		fecha: dtoFromAny.Fecha ?? dtoFromAny.fecha ?? "",
-		horaInicio: anyPayload.horaInicio ?? dtoFromAny.horaInicio ?? "",
+		horaInicio: { ticks: ticks }, // Enviar como objeto ticks
 		recinto: dtoFromAny.Recinto ?? dtoFromAny.recinto ?? "",
 		direccion: dtoFromAny.Direccion ?? dtoFromAny.direccion ?? "",
 		ciudad: dtoFromAny.Ciudad ?? dtoFromAny.ciudad ?? "",
@@ -461,6 +469,14 @@ const updateEvento = async (id: number, payload: UpdateEventoDto): Promise<Event
 		};
 	}
 
+	// Convertir HH:mm:ss a Ticks
+	const timeParts = anyPayload.horaInicio.split(":");
+	const hours = parseInt(timeParts[0], 10);
+	const minutes = parseInt(timeParts[1], 10);
+	const seconds = parseInt(timeParts[2], 10);
+	const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+	const ticks = totalSeconds * 10000000;
+
 	// Construir body plano que el API espera (llaves en minúscula) - para update
 	const dtoFromAny = anyPayload.dto ?? anyPayload;
 	const sendBody: any = {
@@ -468,7 +484,7 @@ const updateEvento = async (id: number, payload: UpdateEventoDto): Promise<Event
 		descripcion: dtoFromAny.Descripcion ?? dtoFromAny.descripcion ?? "",
 		tipoEvento: dtoFromAny.TipoEvento ?? dtoFromAny.tipoEvento ?? "",
 		fecha: dtoFromAny.Fecha ?? dtoFromAny.fecha ?? "",
-		horaInicio: anyPayload.horaInicio ?? dtoFromAny.horaInicio ?? "",
+		horaInicio: { ticks: ticks }, // Enviar como objeto ticks
 		recinto: dtoFromAny.Recinto ?? dtoFromAny.recinto ?? "",
 		direccion: dtoFromAny.Direccion ?? dtoFromAny.direccion ?? "",
 		ciudad: dtoFromAny.Ciudad ?? dtoFromAny.ciudad ?? "",

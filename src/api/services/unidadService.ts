@@ -48,17 +48,17 @@ const handleResponse = async (response: Response) => {
 
 export interface UnidadDto {
 	id: number;
-	numeroEconomico: string;
-	placas: string;
-	marca: string;
-	modelo: string;
-	año: number;
-	tipoUnidad: string;
+	numeroEconomico: string | null;
+	placas: string | null;
+	marca: string | null;
+	modelo: string | null;
+	año: number | null;
+	tipoUnidad: string | null;
 	capacidadAsientos: number;
 	tieneClimatizacion: boolean;
 	tieneBaño: boolean;
 	tieneWifi: boolean;
-	urlFoto: string;
+	urlFoto: string | null;
 	estatus: number;
 	fechaAlta: string;
 }

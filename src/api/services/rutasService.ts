@@ -67,6 +67,7 @@ export interface RutaDto {
 }
 
 export interface ParadaRutaDto {
+	paradaID?: number;
 	nombreParada: string;
 	latitud: number;
 	longitud: number;
@@ -76,6 +77,22 @@ export interface ParadaRutaDto {
 }
 
 export interface CreateRutaDto {
+	codigoRuta: string;
+	nombreRuta: string;
+	ciudadOrigen: string;
+	ciudadDestino: string;
+	puntoPartidaLat: number;
+	puntoPartidaLong: number;
+	puntoPartidaNombre: string;
+	puntoLlegadaLat: number;
+	puntoLlegadaLong: number;
+	puntoLlegadaNombre: string;
+	distanciaKm: number;
+	tiempoEstimadoMinutos: number;
+	paradas?: ParadaRutaDto[];
+}
+
+export interface UpdateRutaDto {
 	codigoRuta: string;
 	nombreRuta: string;
 	ciudadOrigen: string;
@@ -216,10 +233,49 @@ const getParadas = async (id: number): Promise<ParadaRutaDto[]> => {
 	return Array.isArray(data) ? data : [];
 };
 
+/**
+ * PUT /api/Rutas/{id}
+ * Actualizar una ruta existente
+ */
+const update = async (id: number, payload: UpdateRutaDto): Promise<RutaDto> => {
+	console.log("[RutasService] Updating ruta:", id, payload);
+
+	// Validaciones cliente
+	if (!payload || typeof payload !== "object") {
+		console.error("[RutasService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.codigoRuta || payload.codigoRuta.trim() === "") {
+		throw { status: 400, message: "El código de ruta es requerido.", details: { field: "codigoRuta" } };
+	}
+
+	if (!payload.nombreRuta || payload.nombreRuta.trim() === "") {
+		throw { status: 400, message: "El nombre de ruta es requerido.", details: { field: "nombreRuta" } };
+	}
+
+	if (!payload.ciudadOrigen || payload.ciudadOrigen.trim() === "") {
+		throw { status: 400, message: "La ciudad de origen es requerida.", details: { field: "ciudadOrigen" } };
+	}
+
+	if (!payload.ciudadDestino || payload.ciudadDestino.trim() === "") {
+		throw { status: 400, message: "La ciudad de destino es requerida.", details: { field: "ciudadDestino" } };
+	}
+
+	const response = await fetch(`${BASE_URL}/${id}`, {
+		method: "PUT",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
 const rutasService = {
 	getAll,
 	getById,
 	create,
+	update,
 	delete: deleteRuta,
 	toggle,
 	getParadas,

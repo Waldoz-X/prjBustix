@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Calendar, Edit, Eye, Loader2, MapPin, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { toast } from "sonner";
 import eventosService, {
 	type CreateEventoDto,
@@ -27,6 +30,169 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Textarea } from "@/ui/textarea";
 import { handleApiError } from "@/utils/error-handler";
+
+// Posición inicial por defecto (Ciudad de México)
+const defaultPosition: [number, number] = [19.4326, -99.1332];
+
+// Datos de ubicaciones principales de México con coordenadas
+// eslint-disable-next-line @typescript-eslint/naming-convention -- Nombres de ciudades en español requieren acentos
+const MEXICO_LOCATIONS: Record<string, { estado: string; coordenadas: [number, number]; zoom: number }> = {
+	// Ciudad de México
+	"Ciudad de México": { estado: "Ciudad de México", coordenadas: [19.4326, -99.1332], zoom: 11 },
+	// Jalisco
+	Guadalajara: { estado: "Jalisco", coordenadas: [20.6597, -103.3496], zoom: 12 },
+	Zapopan: { estado: "Jalisco", coordenadas: [20.7214, -103.3918], zoom: 13 },
+	Tlaquepaque: { estado: "Jalisco", coordenadas: [20.6401, -103.2937], zoom: 13 },
+	"Puerto Vallarta": { estado: "Jalisco", coordenadas: [20.6534, -105.2253], zoom: 12 },
+	// Nuevo León
+	Monterrey: { estado: "Nuevo León", coordenadas: [25.6866, -100.3161], zoom: 12 },
+	"San Pedro Garza García": { estado: "Nuevo León", coordenadas: [25.6593, -100.4068], zoom: 13 },
+	Apodaca: { estado: "Nuevo León", coordenadas: [25.7807, -100.1877], zoom: 13 },
+	Guadalupe: { estado: "Nuevo León", coordenadas: [25.6747, -100.2597], zoom: 13 },
+	// Guanajuato
+	León: { estado: "Guanajuato", coordenadas: [21.1224, -101.6827], zoom: 12 },
+	Irapuato: { estado: "Guanajuato", coordenadas: [20.6767, -101.3542], zoom: 13 },
+	Celaya: { estado: "Guanajuato", coordenadas: [20.5289, -100.8157], zoom: 13 },
+	Salamanca: { estado: "Guanajuato", coordenadas: [20.5739, -101.1956], zoom: 13 },
+	Guanajuato: { estado: "Guanajuato", coordenadas: [21.019, -101.2574], zoom: 13 },
+	// Puebla
+	Puebla: { estado: "Puebla", coordenadas: [19.0414, -98.2063], zoom: 12 },
+	Tehuacán: { estado: "Puebla", coordenadas: [18.4622, -97.3939], zoom: 13 },
+	Cholula: { estado: "Puebla", coordenadas: [19.0614, -98.3019], zoom: 13 },
+	// Chihuahua
+	Chihuahua: { estado: "Chihuahua", coordenadas: [28.6353, -106.0889], zoom: 12 },
+	"Ciudad Juárez": { estado: "Chihuahua", coordenadas: [31.6904, -106.4245], zoom: 12 },
+	// Veracruz
+	Veracruz: { estado: "Veracruz", coordenadas: [19.1738, -96.1342], zoom: 12 },
+	Xalapa: { estado: "Veracruz", coordenadas: [19.5438, -96.9102], zoom: 13 },
+	Coatzacoalcos: { estado: "Veracruz", coordenadas: [18.1347, -94.4406], zoom: 13 },
+	Córdoba: { estado: "Veracruz", coordenadas: [18.8837, -96.9342], zoom: 13 },
+	// Yucatán
+	Mérida: { estado: "Yucatán", coordenadas: [20.9674, -89.5926], zoom: 12 },
+	// Quintana Roo
+	Cancún: { estado: "Quintana Roo", coordenadas: [21.1619, -86.8515], zoom: 12 },
+	"Playa del Carmen": { estado: "Quintana Roo", coordenadas: [20.6296, -87.0739], zoom: 13 },
+	Tulum: { estado: "Quintana Roo", coordenadas: [20.2114, -87.4654], zoom: 13 },
+	// Estado de México
+	Toluca: { estado: "Estado de México", coordenadas: [19.2827, -99.6557], zoom: 12 },
+	Naucalpan: { estado: "Estado de México", coordenadas: [19.478, -99.2386], zoom: 13 },
+	Ecatepec: { estado: "Estado de México", coordenadas: [19.601, -99.06], zoom: 13 },
+	// Querétaro
+	Querétaro: { estado: "Querétaro", coordenadas: [20.5888, -100.3899], zoom: 12 },
+	// Morelos
+	Cuernavaca: { estado: "Morelos", coordenadas: [18.9211, -99.2361], zoom: 12 },
+	// Aguascalientes
+	Aguascalientes: { estado: "Aguascalientes", coordenadas: [21.8853, -102.2916], zoom: 12 },
+	// San Luis Potosí
+	"San Luis Potosí": { estado: "San Luis Potosí", coordenadas: [22.1565, -100.9855], zoom: 12 },
+	// Sinaloa
+	Culiacán: { estado: "Sinaloa", coordenadas: [24.8091, -107.394], zoom: 12 },
+	Mazatlán: { estado: "Sinaloa", coordenadas: [23.2494, -106.4111], zoom: 12 },
+	// Sonora
+	Hermosillo: { estado: "Sonora", coordenadas: [29.0729, -110.9559], zoom: 12 },
+	// Baja California
+	Tijuana: { estado: "Baja California", coordenadas: [32.5149, -117.0382], zoom: 12 },
+	Mexicali: { estado: "Baja California", coordenadas: [32.6245, -115.4523], zoom: 12 },
+	Ensenada: { estado: "Baja California", coordenadas: [31.8667, -116.5967], zoom: 12 },
+	// Coahuila
+	Saltillo: { estado: "Coahuila", coordenadas: [25.4232, -101.0053], zoom: 12 },
+	Torreón: { estado: "Coahuila", coordenadas: [25.5428, -103.4068], zoom: 12 },
+	// Tamaulipas
+	Tampico: { estado: "Tamaulipas", coordenadas: [22.2331, -97.8611], zoom: 12 },
+	Reynosa: { estado: "Tamaulipas", coordenadas: [26.0922, -98.2777], zoom: 12 },
+	// Michoacán
+	Morelia: { estado: "Michoacán", coordenadas: [19.706, -101.1949], zoom: 12 },
+	// Oaxaca
+	Oaxaca: { estado: "Oaxaca", coordenadas: [17.0732, -96.7266], zoom: 12 },
+	// Guerrero
+	Acapulco: { estado: "Guerrero", coordenadas: [16.8531, -99.8237], zoom: 12 },
+	// Durango
+	Durango: { estado: "Durango", coordenadas: [24.0277, -104.6532], zoom: 12 },
+	// Zacatecas
+	Zacatecas: { estado: "Zacatecas", coordenadas: [22.7709, -102.5832], zoom: 12 },
+};
+
+// Estados únicos para el selector
+const ESTADOS_MEXICO = Array.from(new Set(Object.values(MEXICO_LOCATIONS).map((loc) => loc.estado))).sort();
+
+// Componente para forzar el redibujado del mapa (Solución al "mapa roto")
+function MapResizer() {
+	const map = useMap();
+
+	useEffect(() => {
+		// Forzar recálculo del tamaño del mapa después de renderizar
+		const timer = setTimeout(() => {
+			map.invalidateSize();
+		}, 100);
+
+		return () => clearTimeout(timer);
+	}, [map]);
+
+	return null;
+}
+
+// Componente para actualizar el centro del mapa dinámicamente
+interface MapCenterControllerProps {
+	center: [number, number];
+	zoom?: number;
+}
+
+function MapCenterController({ center, zoom }: MapCenterControllerProps) {
+	const map = useMap();
+
+	useEffect(() => {
+		// Actualizar centro del mapa cuando cambia
+		if (center[0] !== 0 || center[1] !== 0) {
+			map.setView(center, zoom || map.getZoom(), {
+				animate: true,
+				duration: 0.5,
+			});
+		}
+	}, [center, zoom, map]);
+
+	return null;
+}
+
+// Componente para manejar la interacción de selección de punto en el mapa
+interface EventMapSelectorProps {
+	ubicacion: { lat: number; lng: number };
+	onSelect: (lat: number, lng: number) => void;
+}
+
+function EventMapSelector({ ubicacion, onSelect }: EventMapSelectorProps) {
+	const map = useMapEvents({
+		click(e: L.LeafletMouseEvent) {
+			onSelect(e.latlng.lat, e.latlng.lng);
+			map.setView(e.latlng, map.getZoom());
+		},
+	});
+
+	const icon = L.icon({
+		iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+		iconSize: [32, 32],
+		iconAnchor: [16, 32],
+		popupAnchor: [0, -32],
+	});
+
+	// Mostrar marcador solo si no está en la posición por defecto (0, 0)
+	const showMarker = ubicacion.lat !== 0 || ubicacion.lng !== 0;
+
+	return (
+		<>
+			{showMarker && (
+				<Marker position={[ubicacion.lat, ubicacion.lng] as L.LatLngExpression} icon={icon as L.Icon}>
+					<Popup>
+						<b>📍 Ubicación del Evento</b>
+						<br />
+						Latitud: {ubicacion.lat.toFixed(6)}
+						<br />
+						Longitud: {ubicacion.lng.toFixed(6)}
+					</Popup>
+				</Marker>
+			)}
+		</>
+	);
+}
 
 // Definimos un tipo local para el estado del formulario para evitar conflictos con los DTOs
 type FormDataType = {
@@ -74,6 +240,50 @@ export default function EventosPage() {
 
 	// Errores inline por campo
 	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+	// Estado para el mapa
+	const [mapCenter, setMapCenter] = useState<[number, number]>(defaultPosition);
+
+	// Handler para seleccionar ubicación en el mapa
+	const handleMapSelect = (lat: number, lng: number) => {
+		setFormData((prev) => ({
+			...prev,
+			ubicacionLat: lat,
+			ubicacionLong: lng,
+		}));
+	};
+
+	// Handler para cambio de ciudad (autocentra mapa y establece estado)
+	const handleCityChange = (ciudad: string) => {
+		const location = MEXICO_LOCATIONS[ciudad];
+		if (location) {
+			setFormData((prev) => ({
+				...prev,
+				ciudad,
+				estado: location.estado,
+				// Actualizar coordenadas sugeridas
+				ubicacionLat: location.coordenadas[0],
+				ubicacionLong: location.coordenadas[1],
+			}));
+			// Centrar mapa en la ciudad seleccionada
+			setMapCenter(location.coordenadas);
+		} else {
+			// Si no está en la lista, solo actualizar ciudad
+			setFormData((prev) => ({ ...prev, ciudad }));
+		}
+	};
+
+	// Handler para cambio de estado
+	const handleEstadoChange = (estado: string) => {
+		setFormData((prev) => ({ ...prev, estado }));
+		// Si la ciudad actual no pertenece al nuevo estado, limpiarla
+		if (formData.ciudad) {
+			const cityLocation = MEXICO_LOCATIONS[formData.ciudad];
+			if (cityLocation && cityLocation.estado !== estado) {
+				setFormData((prev) => ({ ...prev, ciudad: "" }));
+			}
+		}
+	};
 
 	// Validadores simples reutilizables
 	const isValidUrl = (u: string) => {
@@ -474,6 +684,12 @@ export default function EventosPage() {
 			ubicacionLong: evento.ubicacionLong,
 			urlImagen: evento.urlImagen,
 		});
+
+		// Centrar el mapa en la ubicación del evento
+		if (evento.ubicacionLat && evento.ubicacionLong) {
+			setMapCenter([evento.ubicacionLat, evento.ubicacionLong]);
+		}
+
 		setIsEditDialogOpen(true);
 	};
 
@@ -712,7 +928,7 @@ export default function EventosPage() {
 
 			{/* Dialog: Crear Evento */}
 			<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>Crear Nuevo Evento</DialogTitle>
 						<DialogDescription>Completa la información del evento masivo</DialogDescription>
@@ -807,60 +1023,78 @@ export default function EventosPage() {
 								<Label htmlFor="ciudad">
 									Ciudad <span className="text-destructive">*</span>
 								</Label>
-								<Input
-									id="ciudad"
-									placeholder="Ej: Ciudad de México"
-									value={formData.ciudad}
-									onChange={(e) => handleChange("ciudad", e.target.value)}
-									onBlur={() => validateField("ciudad")}
-								/>
+								<Select value={formData.ciudad} onValueChange={handleCityChange}>
+									<SelectTrigger id="ciudad">
+										<SelectValue placeholder="Selecciona una ciudad" />
+									</SelectTrigger>
+									<SelectContent className="max-h-[300px]">
+										{Object.entries(MEXICO_LOCATIONS)
+											.filter(([_, loc]) => !formData.estado || loc.estado === formData.estado)
+											.sort(([a], [b]) => a.localeCompare(b))
+											.map(([ciudad, loc]) => (
+												<SelectItem key={ciudad} value={ciudad}>
+													{ciudad} {formData.estado ? "" : `(${loc.estado})`}
+												</SelectItem>
+											))}
+									</SelectContent>
+								</Select>
 								{formErrors.ciudad && <p className="text-sm text-destructive mt-1">{formErrors.ciudad}</p>}
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="estado">Estado</Label>
-								<Input
-									id="estado"
-									placeholder="Ej: CDMX"
-									value={formData.estado}
-									onChange={(e) => handleChange("estado", e.target.value)}
-									onBlur={() => validateField("estado")}
-								/>
+								<Label htmlFor="estado">
+									Estado <span className="text-destructive">*</span>
+								</Label>
+								<Select value={formData.estado} onValueChange={handleEstadoChange}>
+									<SelectTrigger id="estado">
+										<SelectValue placeholder="Selecciona un estado" />
+									</SelectTrigger>
+									<SelectContent className="max-h-[300px]">
+										{ESTADOS_MEXICO.map((estado) => (
+											<SelectItem key={estado} value={estado}>
+												{estado}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								{formErrors.estado && <p className="text-sm text-destructive mt-1">{formErrors.estado}</p>}
 							</div>
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="ubicacionLat">
-									Latitud <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="ubicacionLat"
-									type="number"
-									step="any"
-									placeholder="-99.9999"
-									value={formData.ubicacionLat}
-									onChange={(e) => handleChange("ubicacionLat", e.target.value)}
-									onBlur={() => validateField("ubicacionLat")}
-								/>
-								{formErrors.ubicacionLat && <p className="text-sm text-destructive mt-1">{formErrors.ubicacionLat}</p>}
+						{/* Selector de Mapa para Ubicación */}
+						<div className="space-y-4">
+							<Label>
+								Ubicación del Evento <span className="text-destructive">*</span>
+							</Label>
+							<p className="text-sm text-muted-foreground">
+								Haz clic en el mapa para seleccionar la ubicación del evento
+							</p>
+							<div className="border rounded-lg overflow-hidden">
+								<MapContainer
+									key={`map-create-${isCreateDialogOpen}`}
+									center={mapCenter as L.LatLngExpression}
+									zoom={13}
+									style={{ height: "400px", width: "100%" }}
+									scrollWheelZoom={true}
+								>
+									<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+									<MapResizer />
+									<MapCenterController center={mapCenter} zoom={13} />
+									<EventMapSelector
+										ubicacion={{ lat: formData.ubicacionLat, lng: formData.ubicacionLong }}
+										onSelect={handleMapSelect}
+									/>
+								</MapContainer>
 							</div>
-							<div className="space-y-2">
-								<Label htmlFor="ubicacionLong">
-									Longitud <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="ubicacionLong"
-									type="number"
-									step="any"
-									placeholder="-99.9999"
-									value={formData.ubicacionLong}
-									onChange={(e) => handleChange("ubicacionLong", e.target.value)}
-									onBlur={() => validateField("ubicacionLong")}
-								/>
-								{formErrors.ubicacionLong && (
-									<p className="text-sm text-destructive mt-1">{formErrors.ubicacionLong}</p>
-								)}
+							<div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+								<MapPin className="h-4 w-4" />
+								<span>
+									Ubicación seleccionada: Lat: {formData.ubicacionLat.toFixed(6)} | Lng:{" "}
+									{formData.ubicacionLong.toFixed(6)}
+								</span>
 							</div>
+							{(formErrors.ubicacionLat || formErrors.ubicacionLong) && (
+								<p className="text-sm text-destructive mt-1">{formErrors.ubicacionLat || formErrors.ubicacionLong}</p>
+							)}
 						</div>
 
 						<div className="space-y-2">
@@ -889,7 +1123,7 @@ export default function EventosPage() {
 
 			{/* Dialog: Editar Evento */}
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>Editar Evento</DialogTitle>
 						<DialogDescription>Actualiza la información del evento masivo</DialogDescription>
@@ -984,60 +1218,83 @@ export default function EventosPage() {
 								<Label htmlFor="ciudad">
 									Ciudad <span className="text-destructive">*</span>
 								</Label>
-								<Input
-									id="ciudad"
-									placeholder="Ej: Ciudad de México"
-									value={formData.ciudad}
-									onChange={(e) => handleChange("ciudad", e.target.value)}
-									onBlur={() => validateField("ciudad")}
-								/>
+								<Select value={formData.ciudad} onValueChange={handleCityChange}>
+									<SelectTrigger id="ciudad">
+										<SelectValue placeholder="Selecciona una ciudad" />
+									</SelectTrigger>
+									<SelectContent className="max-h-[300px]">
+										{Object.entries(MEXICO_LOCATIONS)
+											.filter(([_, loc]) => !formData.estado || loc.estado === formData.estado)
+											.sort(([a], [b]) => a.localeCompare(b))
+											.map(([ciudad, loc]) => (
+												<SelectItem key={ciudad} value={ciudad}>
+													{ciudad} {formData.estado ? "" : `(${loc.estado})`}
+												</SelectItem>
+											))}
+									</SelectContent>
+								</Select>
 								{formErrors.ciudad && <p className="text-sm text-destructive mt-1">{formErrors.ciudad}</p>}
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="estado">Estado</Label>
-								<Input
-									id="estado"
-									placeholder="Ej: CDMX"
-									value={formData.estado}
-									onChange={(e) => handleChange("estado", e.target.value)}
-									onBlur={() => validateField("estado")}
-								/>
+								<Label htmlFor="estado">
+									Estado <span className="text-destructive">*</span>
+								</Label>
+								<Select value={formData.estado} onValueChange={handleEstadoChange}>
+									<SelectTrigger id="estado">
+										<SelectValue placeholder="Selecciona un estado" />
+									</SelectTrigger>
+									<SelectContent className="max-h-[300px]">
+										{ESTADOS_MEXICO.map((estado) => (
+											<SelectItem key={estado} value={estado}>
+												{estado}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								{formErrors.estado && <p className="text-sm text-destructive mt-1">{formErrors.estado}</p>}
 							</div>
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="ubicacionLat">
-									Latitud <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="ubicacionLat"
-									type="number"
-									step="any"
-									placeholder="-99.9999"
-									value={formData.ubicacionLat}
-									onChange={(e) => handleChange("ubicacionLat", e.target.value)}
-									onBlur={() => validateField("ubicacionLat")}
-								/>
-								{formErrors.ubicacionLat && <p className="text-sm text-destructive mt-1">{formErrors.ubicacionLat}</p>}
+						{/* Selector de Mapa para Ubicación */}
+						<div className="space-y-4">
+							<Label>
+								Ubicación del Evento <span className="text-destructive">*</span>
+							</Label>
+							<p className="text-sm text-muted-foreground">
+								Haz clic en el mapa para actualizar la ubicación del evento
+							</p>
+							<div className="border rounded-lg overflow-hidden">
+								<MapContainer
+									key={`map-edit-${isEditDialogOpen}`}
+									center={
+										[
+											formData.ubicacionLat || defaultPosition[0],
+											formData.ubicacionLong || defaultPosition[1],
+										] as L.LatLngExpression
+									}
+									zoom={13}
+									style={{ height: "400px", width: "100%" }}
+									scrollWheelZoom={true}
+								>
+									<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+									<MapResizer />
+									<MapCenterController center={mapCenter} zoom={13} />
+									<EventMapSelector
+										ubicacion={{ lat: formData.ubicacionLat, lng: formData.ubicacionLong }}
+										onSelect={handleMapSelect}
+									/>
+								</MapContainer>
 							</div>
-							<div className="space-y-2">
-								<Label htmlFor="ubicacionLong">
-									Longitud <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="ubicacionLong"
-									type="number"
-									step="any"
-									placeholder="-99.9999"
-									value={formData.ubicacionLong}
-									onChange={(e) => handleChange("ubicacionLong", e.target.value)}
-									onBlur={() => validateField("ubicacionLong")}
-								/>
-								{formErrors.ubicacionLong && (
-									<p className="text-sm text-destructive mt-1">{formErrors.ubicacionLong}</p>
-								)}
+							<div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+								<MapPin className="h-4 w-4" />
+								<span>
+									Ubicación seleccionada: Lat: {formData.ubicacionLat.toFixed(6)} | Lng:{" "}
+									{formData.ubicacionLong.toFixed(6)}
+								</span>
 							</div>
+							{(formErrors.ubicacionLat || formErrors.ubicacionLong) && (
+								<p className="text-sm text-destructive mt-1">{formErrors.ubicacionLat || formErrors.ubicacionLong}</p>
+							)}
 						</div>
 
 						<div className="space-y-2">
@@ -1066,7 +1323,7 @@ export default function EventosPage() {
 
 			{/* Dialog: Detalles del Evento */}
 			<Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="!max-w-3xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>Detalles del Evento</DialogTitle>
 						<DialogDescription>Información completa del evento masivo</DialogDescription>
