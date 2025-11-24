@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronDown, ChevronUp, Loader2, Map as MapIcon, MapPin, Plus, Power, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Map as MapIcon, MapPin, Pencil, Plus, Power, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { toast } from "sonner";
@@ -38,10 +38,15 @@ function MapResizer() {
 interface MapSelectorProps {
 	partida: { lat: number; lng: number };
 	llegada: { lat: number; lng: number };
+	paradas: Array<{ latitud: number; longitud: number; nombreParada: string }>;
 	onSelect: (lat: number, lng: number) => void;
 }
 
-function MapSelector({ partida, llegada, onSelect }: MapSelectorProps) {
+const ICON_PARTIDA_URL = "https://cdn-icons-png.flaticon.com/512/684/684908.png";
+const ICON_LLEGADA_URL = "https://cdn-icons-png.flaticon.com/512/3448/3448339.png";
+const ICON_PARADA_URL = "https://cdn-icons-png.flaticon.com/512/3721/3721838.png";
+
+function MapSelector({ partida, llegada, paradas, onSelect }: MapSelectorProps) {
 	const map = useMapEvents({
 		click(e: L.LeafletMouseEvent) {
 			onSelect(e.latlng.lat, e.latlng.lng);
@@ -50,17 +55,24 @@ function MapSelector({ partida, llegada, onSelect }: MapSelectorProps) {
 	});
 
 	const iconPartida = L.icon({
-		iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+		iconUrl: ICON_PARTIDA_URL,
 		iconSize: [32, 32],
 		iconAnchor: [16, 32],
 		popupAnchor: [0, -32],
 	});
 
 	const iconLlegada = L.icon({
-		iconUrl: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+		iconUrl: ICON_LLEGADA_URL,
 		iconSize: [32, 32],
 		iconAnchor: [16, 32],
 		popupAnchor: [0, -32],
+	});
+
+	const iconParada = L.icon({
+		iconUrl: ICON_PARADA_URL,
+		iconSize: [24, 24],
+		iconAnchor: [12, 24],
+		popupAnchor: [0, -24],
 	});
 
 	// Mostrar marcadores siempre (incluso en posición por defecto)
@@ -91,6 +103,23 @@ function MapSelector({ partida, llegada, onSelect }: MapSelectorProps) {
 					</Popup>
 				</Marker>
 			)}
+			{paradas.map((parada, index) => (
+				<Marker
+					key={`parada-${parada.latitud}-${parada.longitud}`}
+					position={[parada.latitud, parada.longitud] as L.LatLngExpression}
+					icon={iconParada as L.Icon}
+				>
+					<Popup>
+						<b>
+							🚏 Parada {index + 1}: {parada.nombreParada}
+						</b>
+						<br />
+						Latitud: {parada.latitud.toFixed(6)}
+						<br />
+						Longitud: {parada.longitud.toFixed(6)}
+					</Popup>
+				</Marker>
+			))}
 		</>
 	);
 }
@@ -98,6 +127,7 @@ function MapSelector({ partida, llegada, onSelect }: MapSelectorProps) {
 export default function RutasPage() {
 	const queryClient = useQueryClient();
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
+	const [editingId, setEditingId] = useState<number | null>(null);
 
 	// Inicializar Partida y Llegada con la posición por defecto
 	const [rutaForm, setRutaForm] = useState<CreateRutaDto>({
@@ -117,8 +147,17 @@ export default function RutasPage() {
 	});
 
 	const [mapCenter, setMapCenter] = useState<[number, number]>(defaultPosition);
-	const [mapMode, setMapMode] = useState<"partida" | "llegada">("partida");
+	const [mapMode, setMapMode] = useState<"partida" | "llegada" | "parada">("partida");
 	const [expandedCards, setExpandedCards] = useState<number[]>([]);
+
+	// Estado para la nueva parada que se está creando
+	const [newParada, setNewParada] = useState({
+		nombreParada: "",
+		latitud: 0,
+		longitud: 0,
+		direccion: "",
+		tiempoEsperaMinutos: 0,
+	});
 
 	// Los datos llegan en PascalCase gracias al servicio
 	const { data: rutas = [], isLoading } = useQuery({
@@ -128,20 +167,161 @@ export default function RutasPage() {
 
 	const handleMapSelect = (lat: number, lng: number) => {
 		if (mapMode === "partida") {
-			setRutaForm((prevForm: any) => ({
+			setRutaForm((prevForm) => ({
 				...prevForm,
 				puntoPartidaLat: lat,
 				puntoPartidaLong: lng,
 				puntoPartidaNombre: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
 			}));
-		} else {
-			setRutaForm((prevForm: any) => ({
+		} else if (mapMode === "llegada") {
+			setRutaForm((prevForm) => ({
 				...prevForm,
 				puntoLlegadaLat: lat,
 				puntoLlegadaLong: lng,
 				puntoLlegadaNombre: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
 			}));
+		} else if (mapMode === "parada") {
+			setNewParada((prev) => ({
+				...prev,
+				latitud: lat,
+				longitud: lng,
+				direccion: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+			}));
+			toast.success("Ubicación de parada seleccionada");
 		}
+	};
+
+	const handleAddParada = () => {
+		if (!newParada.nombreParada.trim()) {
+			toast.error("El nombre de la parada es requerido");
+			return;
+		}
+		if (newParada.latitud === 0 || newParada.longitud === 0) {
+			toast.error("Debes seleccionar una ubicación en el mapa para la parada");
+			return;
+		}
+
+		const paradaToAdd = {
+			...newParada,
+			ordenParada: 0, // Se recalcula abajo
+		};
+
+		setRutaForm((prev) => {
+			const updatedParadas = [...(prev.paradas || []), paradaToAdd].map((p, index) => ({
+				...p,
+				ordenParada: index + 1,
+			}));
+			return {
+				...prev,
+				paradas: updatedParadas,
+			};
+		});
+
+		setNewParada({
+			nombreParada: "",
+			latitud: 0,
+			longitud: 0,
+			direccion: "",
+			tiempoEsperaMinutos: 0,
+		});
+		toast.success("Parada agregada");
+	};
+
+	const handleRemoveParada = (index: number) => {
+		setRutaForm((prev) => {
+			const updatedParadas = (prev.paradas || [])
+				.filter((_, i) => i !== index)
+				.map((p, idx) => ({
+					...p,
+					ordenParada: idx + 1,
+				}));
+			return {
+				...prev,
+				paradas: updatedParadas,
+			};
+		});
+	};
+
+	const handleCityBlur = async (city: string, type: "origen" | "destino") => {
+		if (!city || city.length < 3) return;
+		try {
+			const response = await fetch(
+				`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`,
+			);
+			const data = await response.json();
+			if (data && data.length > 0) {
+				const { lat, lon } = data[0];
+				const latNum = Number.parseFloat(lat);
+				const lngNum = Number.parseFloat(lon);
+				if (type === "origen") {
+					setRutaForm((prev) => ({
+						...prev,
+						puntoPartidaLat: latNum,
+						puntoPartidaLong: lngNum,
+						puntoPartidaNombre: city,
+					}));
+					setMapCenter([latNum, lngNum]);
+				} else {
+					setRutaForm((prev) => ({
+						...prev,
+						puntoLlegadaLat: latNum,
+						puntoLlegadaLong: lngNum,
+						puntoLlegadaNombre: city,
+					}));
+				}
+				toast.success(`Ubicación encontrada para ${city}`);
+			}
+		} catch (error) {
+			console.error("Error geocoding city:", error);
+		}
+	};
+
+	const handleEdit = async (ruta: RutaDto) => {
+		setEditingId(ruta.rutaID);
+		try {
+			const paradas = await rutasService.getParadas(ruta.rutaID);
+			setRutaForm({
+				codigoRuta: ruta.codigoRuta,
+				nombreRuta: ruta.nombreRuta,
+				ciudadOrigen: ruta.ciudadOrigen,
+				ciudadDestino: ruta.ciudadDestino,
+				puntoPartidaLat: ruta.puntoPartidaLat,
+				puntoPartidaLong: ruta.puntoPartidaLong,
+				puntoPartidaNombre: ruta.puntoPartidaNombre,
+				puntoLlegadaLat: ruta.puntoLlegadaLat,
+				puntoLlegadaLong: ruta.puntoLlegadaLong,
+				puntoLlegadaNombre: ruta.puntoLlegadaNombre,
+				distanciaKm: ruta.distanciaKm,
+				tiempoEstimadoMinutos: ruta.tiempoEstimadoMinutos,
+				paradas: paradas || [],
+			});
+			setMapCenter([ruta.puntoPartidaLat, ruta.puntoPartidaLong]);
+			setIsCreateOpen(true);
+		} catch (error) {
+			toast.error("Error al cargar los detalles de la ruta");
+			console.error(error);
+		}
+	};
+
+	const resetForm = () => {
+		setEditingId(null);
+		setRutaForm({
+			codigoRuta: "",
+			nombreRuta: "",
+			ciudadOrigen: "",
+			ciudadDestino: "",
+			puntoPartidaLat: defaultPosition[0],
+			puntoPartidaLong: defaultPosition[1],
+			puntoPartidaNombre: "",
+			puntoLlegadaLat: defaultPosition[0],
+			puntoLlegadaLong: defaultPosition[1],
+			puntoLlegadaNombre: "",
+			distanciaKm: 0,
+			tiempoEstimadoMinutos: 0,
+			paradas: [],
+		});
+		setMapCenter(defaultPosition);
+		setIsCreateOpen(false);
 	};
 
 	const isFormValid = () => {
@@ -188,43 +368,40 @@ export default function RutasPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["rutas"] });
 			toast.success("Ruta creada correctamente");
-			setIsCreateOpen(false);
-			setRutaForm({
-				codigoRuta: "",
-				nombreRuta: "",
-				ciudadOrigen: "",
-				ciudadDestino: "",
-				puntoPartidaLat: defaultPosition[0],
-				puntoPartidaLong: defaultPosition[1],
-				puntoPartidaNombre: "",
-				puntoLlegadaLat: defaultPosition[0],
-				puntoLlegadaLong: defaultPosition[1],
-				puntoLlegadaNombre: "",
-				distanciaKm: 0,
-				tiempoEstimadoMinutos: 0,
-				paradas: [],
-			});
-			setMapCenter(defaultPosition);
+			resetForm();
 		},
 		onError: (err: any) => {
-			// Manejo de errores del backend
-			let errorMessage = "Error desconocido al crear ruta";
-
-			if (err.response) {
-				// Error del servidor (400, 500, etc.)
-				errorMessage = err.response.data?.message || err.response.data?.error || err.message;
-			} else if (err.request) {
-				// La petición se envió pero no hubo respuesta
-				errorMessage = "No se pudo conectar con el servidor";
-			} else {
-				// Error al configurar la petición
-				errorMessage = err.message;
-			}
-
-			toast.error(`Error al crear ruta: ${errorMessage}`);
-			console.error("Error creando ruta:", err);
+			handleMutationError(err, "crear");
 		},
 	});
+
+	const updateMutation = useMutation({
+		mutationFn: (data: CreateRutaDto) => {
+			if (editingId === null) throw new Error("No se ha seleccionado una ruta para editar");
+			return rutasService.update(editingId, data);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["rutas"] });
+			toast.success("Ruta actualizada correctamente");
+			resetForm();
+		},
+		onError: (err: any) => {
+			handleMutationError(err, "actualizar");
+		},
+	});
+
+	const handleMutationError = (err: any, action: string) => {
+		let errorMessage: string;
+		if (err.response) {
+			errorMessage = err.response.data?.message || err.response.data?.error || err.message;
+		} else if (err.request) {
+			errorMessage = "No se pudo conectar con el servidor";
+		} else {
+			errorMessage = err.message;
+		}
+		toast.error(`Error al ${action} ruta: ${errorMessage}`);
+		console.error(`Error ${action} ruta:`, err);
+	};
 
 	return (
 		<div className="space-y-6">
@@ -236,7 +413,27 @@ export default function RutasPage() {
 						Administra las rutas del sistema, define puntos de partida y llegada en el mapa
 					</p>
 				</div>
-				<Button onClick={() => setIsCreateOpen(true)}>
+				<Button
+					onClick={() => {
+						setEditingId(null);
+						setRutaForm({
+							codigoRuta: "",
+							nombreRuta: "",
+							ciudadOrigen: "",
+							ciudadDestino: "",
+							puntoPartidaLat: defaultPosition[0],
+							puntoPartidaLong: defaultPosition[1],
+							puntoPartidaNombre: "",
+							puntoLlegadaLat: defaultPosition[0],
+							puntoLlegadaLong: defaultPosition[1],
+							puntoLlegadaNombre: "",
+							distanciaKm: 0,
+							tiempoEstimadoMinutos: 0,
+							paradas: [],
+						});
+						setIsCreateOpen(true);
+					}}
+				>
 					<Plus className="mr-2 h-4 w-4" />
 					Crear Ruta
 				</Button>
@@ -273,6 +470,15 @@ export default function RutasPage() {
 													className="h-8 w-8"
 												>
 													{expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+												</Button>
+												<Button
+													variant="ghost"
+													size="icon"
+													onClick={() => handleEdit(ruta)}
+													title="Editar ruta"
+													className="h-8 w-8"
+												>
+													<Pencil className="h-4 w-4" />
 												</Button>
 												<Button
 													variant={ruta.activa ? "default" : "outline"}
@@ -391,7 +597,27 @@ export default function RutasPage() {
 									<p className="text-muted-foreground mb-4">
 										Comienza creando tu primera ruta haciendo clic en "Crear Ruta"
 									</p>
-									<Button onClick={() => setIsCreateOpen(true)}>
+									<Button
+										onClick={() => {
+											setEditingId(null);
+											setRutaForm({
+												codigoRuta: "",
+												nombreRuta: "",
+												ciudadOrigen: "",
+												ciudadDestino: "",
+												puntoPartidaLat: defaultPosition[0],
+												puntoPartidaLong: defaultPosition[1],
+												puntoPartidaNombre: "",
+												puntoLlegadaLat: defaultPosition[0],
+												puntoLlegadaLong: defaultPosition[1],
+												puntoLlegadaNombre: "",
+												distanciaKm: 0,
+												tiempoEstimadoMinutos: 0,
+												paradas: [],
+											});
+											setIsCreateOpen(true);
+										}}
+									>
 										<Plus className="mr-2 h-4 w-4" />
 										Crear Primera Ruta
 									</Button>
@@ -404,14 +630,18 @@ export default function RutasPage() {
 
 			{/* Diálogo para crear ruta */}
 			<Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Crear Nueva Ruta</DialogTitle>
-						<DialogDescription>Completa la información de la ruta y selecciona los puntos en el mapa</DialogDescription>
+						<DialogTitle>{editingId ? "Editar Ruta" : "Crear Nueva Ruta"}</DialogTitle>
+						<DialogDescription>
+							{editingId
+								? "Modifica la información de la ruta y sus paradas"
+								: "Completa la información de la ruta y selecciona los puntos en el mapa"}
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-6 py-4">
 						{/* Información básica */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div className="space-y-2">
 								<Label htmlFor="codigoRuta">Código de Ruta *</Label>
 								<Input
@@ -443,6 +673,7 @@ export default function RutasPage() {
 									placeholder="Ej: Ciudad de México"
 									value={rutaForm.ciudadOrigen}
 									onChange={(e) => setRutaForm({ ...rutaForm, ciudadOrigen: e.target.value })}
+									onBlur={(e) => handleCityBlur(e.target.value, "origen")}
 								/>
 								{rutaForm.ciudadOrigen.trim().length < 3 && (
 									<p className="text-xs text-destructive">Mínimo 3 caracteres</p>
@@ -455,6 +686,7 @@ export default function RutasPage() {
 									placeholder="Ej: Guadalajara"
 									value={rutaForm.ciudadDestino}
 									onChange={(e) => setRutaForm({ ...rutaForm, ciudadDestino: e.target.value })}
+									onBlur={(e) => handleCityBlur(e.target.value, "destino")}
 								/>
 								{rutaForm.ciudadDestino.trim().length < 3 && (
 									<p className="text-xs text-destructive">Mínimo 3 caracteres</p>
@@ -509,6 +741,13 @@ export default function RutasPage() {
 									>
 										🏁 Punto de Llegada
 									</Button>
+									<Button
+										size="sm"
+										variant={mapMode === "parada" ? "default" : "outline"}
+										onClick={() => setMapMode("parada")}
+									>
+										🚏 Agregar Parada
+									</Button>
 								</div>
 							</div>
 							<div className="border rounded-lg overflow-hidden">
@@ -525,6 +764,7 @@ export default function RutasPage() {
 									<MapSelector
 										partida={{ lat: rutaForm.puntoPartidaLat, lng: rutaForm.puntoPartidaLong }}
 										llegada={{ lat: rutaForm.puntoLlegadaLat, lng: rutaForm.puntoLlegadaLong }}
+										paradas={rutaForm.paradas || []}
 										onSelect={handleMapSelect}
 									/>
 								</MapContainer>
@@ -557,6 +797,76 @@ export default function RutasPage() {
 							</div>
 						</div>
 
+						{/* Sección de Paradas */}
+						<div className="space-y-4 pt-4 border-t">
+							<h3 className="text-lg font-semibold">Paradas Intermedias</h3>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+								<div className="space-y-2">
+									<Label>Nombre de Parada</Label>
+									<Input
+										placeholder="Ej: Centro Comercial"
+										value={newParada.nombreParada}
+										onChange={(e) => setNewParada({ ...newParada, nombreParada: e.target.value })}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label>Tiempo de Espera (min)</Label>
+									<Input
+										type="number"
+										min={0}
+										placeholder="0"
+										value={newParada.tiempoEsperaMinutos}
+										onChange={(e) => setNewParada({ ...newParada, tiempoEsperaMinutos: Number(e.target.value) })}
+									/>
+								</div>
+								<Button
+									type="button"
+									onClick={handleAddParada}
+									disabled={!newParada.nombreParada || newParada.latitud === 0}
+								>
+									<Plus className="mr-2 h-4 w-4" />
+									Agregar Parada
+								</Button>
+							</div>
+
+							{/* Lista de paradas agregadas */}
+							{rutaForm.paradas && rutaForm.paradas.length > 0 ? (
+								<div className="border rounded-md divide-y">
+									{rutaForm.paradas.map((parada, index) => (
+										<div
+											key={`list-parada-${parada.latitud}-${parada.longitud}`}
+											className="p-3 flex items-center justify-between hover:bg-accent/50"
+										>
+											<div className="flex items-center gap-3">
+												<Badge variant="outline" className="h-6 w-6 flex items-center justify-center rounded-full p-0">
+													{index + 1}
+												</Badge>
+												<div>
+													<p className="font-medium">{parada.nombreParada}</p>
+													<p className="text-xs text-muted-foreground">
+														Espera: {parada.tiempoEsperaMinutos} min | Lat: {parada.latitud.toFixed(4)}, Lng:{" "}
+														{parada.longitud.toFixed(4)}
+													</p>
+												</div>
+											</div>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="text-destructive hover:text-destructive"
+												onClick={() => handleRemoveParada(index)}
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+								</div>
+							) : (
+								<div className="text-center p-4 border border-dashed rounded-md text-muted-foreground text-sm">
+									No hay paradas agregadas. Usa el mapa y el formulario de arriba para agregar paradas intermedias.
+								</div>
+							)}
+						</div>
+
 						{!isFormValid() && (
 							<span className="text-xs text-red-500 mt-2">
 								Asegúrate de rellenar todos los campos correctamente y de seleccionar los puntos en el mapa.
@@ -564,20 +874,26 @@ export default function RutasPage() {
 						)}
 
 						<div className="flex justify-end gap-2 pt-4">
-							<Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+							<Button variant="outline" onClick={resetForm}>
 								Cancelar
 							</Button>
 							<Button
 								onClick={() => {
-									createMutation.mutate(rutaForm);
+									if (editingId) {
+										updateMutation.mutate(rutaForm);
+									} else {
+										createMutation.mutate(rutaForm);
+									}
 								}}
-								disabled={createMutation.isPending || !isFormValid()}
+								disabled={createMutation.isPending || updateMutation.isPending || !isFormValid()}
 							>
-								{createMutation.isPending ? (
+								{createMutation.isPending || updateMutation.isPending ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Creando...
+										{editingId ? "Actualizando..." : "Creando..."}
 									</>
+								) : editingId ? (
+									"Actualizar Ruta"
 								) : (
 									"Guardar Ruta"
 								)}
