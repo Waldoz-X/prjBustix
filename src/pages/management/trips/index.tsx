@@ -11,6 +11,8 @@ import {
 	Plus,
 	Search,
 	Trash2,
+	User,
+	Users,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -51,6 +53,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { handleApiError } from "@/utils/error-handler";
 import { ConfigurePricesModal } from "./configure-prices-modal";
+import { ViewTripModal } from "./view-trip-modal";
 
 type FormDataType = {
 	eventoID: number;
@@ -88,6 +91,7 @@ export default function ViajesPage() {
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+	const [isViewTripOpen, setIsViewTripOpen] = useState(false);
 	const [selectedViaje, setSelectedViaje] = useState<ViajeDto | null>(null);
 	const [paradas, setParadas] = useState<any[]>([]);
 	const [manifiesto, setManifiesto] = useState<any | null>(null);
@@ -375,6 +379,11 @@ export default function ViajesPage() {
 		updateMutation.mutate({ id: selectedViaje.viajeID, data: payload });
 	};
 
+	const handleViewDetails = (viaje: ViajeDto) => {
+		setSelectedViaje(viaje);
+		setIsViewTripOpen(true);
+	};
+
 	const handleDeleteConfirm = (viaje: ViajeDto) => {
 		setSelectedViaje(viaje);
 		setIsDeleteOpen(true);
@@ -590,46 +599,56 @@ export default function ViajesPage() {
 												</Badge>
 											</TableCell>
 											<TableCell className="text-right">
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" size="icon">
-															<MoreHorizontal className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuLabel>Acciones</DropdownMenuLabel>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															onClick={() => {
-																setSelectedViaje(v);
-																handleOpenParadas(v);
-															}}
-														>
-															<Eye className="mr-2 h-4 w-4" /> Ver paradas
-														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => handleOpenManifiesto(v)}>
-															<Eye className="mr-2 h-4 w-4" /> Manifiesto
-														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => handleEditOpen(v)}>
-															<Edit className="mr-2 h-4 w-4" /> Editar
-														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => handleOpenAssignStaff(v)}>
-															<Edit className="mr-2 h-4 w-4" /> Asignar Staff
-														</DropdownMenuItem>
-														<DropdownMenuItem
-															onClick={() => {
-																setSelectedViaje(v);
-																setIsConfigurePricesOpen(true);
-															}}
-														>
-															<DollarSign className="mr-2 h-4 w-4" /> Configurar Precios
-														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem onClick={() => handleDeleteConfirm(v)} className="text-destructive">
-															<Trash2 className="mr-2 h-4 w-4" /> Eliminar
-														</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
+												<div className="flex items-center justify-end gap-2">
+													<Button variant="ghost" size="sm" onClick={() => handleViewDetails(v)} title="Ver detalles">
+														<Eye className="h-4 w-4" />
+													</Button>
+													<Button variant="ghost" size="sm" onClick={() => handleEditOpen(v)} title="Editar">
+														<Edit className="h-4 w-4" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => handleDeleteConfirm(v)}
+														className="text-destructive hover:text-destructive"
+														title="Eliminar"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button variant="ghost" size="sm" title="Más acciones">
+																<MoreHorizontal className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end">
+															<DropdownMenuLabel>Más Acciones</DropdownMenuLabel>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem
+																onClick={() => {
+																	setSelectedViaje(v);
+																	handleOpenParadas(v);
+																}}
+															>
+																<MapPin className="mr-2 h-4 w-4" /> Ver paradas
+															</DropdownMenuItem>
+															<DropdownMenuItem onClick={() => handleOpenManifiesto(v)}>
+																<Users className="mr-2 h-4 w-4" /> Manifiesto
+															</DropdownMenuItem>
+															<DropdownMenuItem onClick={() => handleOpenAssignStaff(v)}>
+																<User className="mr-2 h-4 w-4" /> Asignar Staff
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={() => {
+																	setSelectedViaje(v);
+																	setIsConfigurePricesOpen(true);
+																}}
+															>
+																<DollarSign className="mr-2 h-4 w-4" /> Configurar Precios
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</div>
 											</TableCell>
 										</TableRow>
 									))}
@@ -1223,6 +1242,87 @@ export default function ViajesPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* View Trip Details Modal */}
+			<ViewTripModal
+				open={isViewTripOpen}
+				onOpenChange={setIsViewTripOpen}
+				viaje={selectedViaje}
+				onEdit={() => {
+					setIsViewTripOpen(false);
+					if (selectedViaje) handleEditOpen(selectedViaje);
+				}}
+				onConfigurePrices={() => {
+					setIsViewTripOpen(false);
+					setIsConfigurePricesOpen(true);
+				}}
+				onViewStops={() => {
+					setIsViewTripOpen(false);
+					if (selectedViaje) handleOpenParadas(selectedViaje);
+				}}
+			/>
+
+			{/* Delete Confirmation AlertDialog */}
+			<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar viaje {selectedViaje?.codigoViaje}?</AlertDialogTitle>
+						<AlertDialogDescription asChild>
+							<div className="space-y-3 mt-2">
+								<p>Esta acción no se puede deshacer. Se eliminará permanentemente este viaje.</p>
+								<div className="bg-muted p-3 rounded-md space-y-1.5 text-sm">
+									<p>
+										<strong>Evento:</strong> {selectedViaje?.eventoNombre}
+									</p>
+									<p>
+										<strong>Fecha de salida:</strong> {formatDate(selectedViaje?.fechaSalida)}
+									</p>
+									<p>
+										<strong>Ruta:</strong> {selectedViaje?.ciudadOrigen} → {selectedViaje?.ciudadDestino}
+									</p>
+								</div>
+								{selectedViaje && selectedViaje.asientosVendidos > 0 && (
+									<div className="bg-destructive/10 border border-destructive/20 p-3 rounded-md">
+										<p className="text-destructive font-semibold text-sm">
+											⚠️ Este viaje tiene {selectedViaje.asientosVendidos} asiento
+											{selectedViaje.asientosVendidos !== 1 ? "s" : ""} vendido
+											{selectedViaje.asientosVendidos !== 1 ? "s" : ""}
+										</p>
+										<p className="text-destructive text-xs mt-1">
+											Eliminar este viaje afectará a los pasajeros que ya compraron boletos.
+										</p>
+									</div>
+								)}
+								{selectedViaje && selectedViaje.totalStaff > 0 && (
+									<div className="bg-amber-50 border border-amber-200 p-3 rounded-md">
+										<p className="text-amber-800 font-semibold text-sm">
+											⚠️ Este viaje tiene {selectedViaje.totalStaff} miembro
+											{selectedViaje.totalStaff !== 1 ? "s" : ""} del staff asignado
+											{selectedViaje.totalStaff !== 1 ? "s" : ""}
+										</p>
+									</div>
+								)}
+							</div>
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleDeleteSubmit}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							{deleteMutation.isPending ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Eliminando...
+								</>
+							) : (
+								"Eliminar viaje"
+							)}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
