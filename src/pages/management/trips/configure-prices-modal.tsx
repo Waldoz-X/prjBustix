@@ -46,10 +46,10 @@ export function ConfigurePricesModal({ open, onOpenChange, viaje }: ConfigurePri
 		if (paradas.length > 0) {
 			const initialPrices: PriceRow[] = paradas.map((p) => {
 				// Check if we have an existing price config for this stop
-				const existing = existingPrices.find((ep) => ep.paradaViajeID === p.paradaID);
+				const existing = existingPrices.find((ep) => ep.paradaViajeID === p.paradaViajeID);
 				return {
-					paradaViajeID: p.paradaID,
-					nombreParada: p.ubicacionNombre,
+					paradaViajeID: p.paradaViajeID,
+					nombreParada: p.nombreParada,
 					precioBase: existing ? existing.precioBase : viaje?.precioBase || 0,
 					cargoServicio: existing ? existing.cargoServicio : viaje?.cargoServicio || 0,
 					observaciones: existing ? existing.observaciones : "",

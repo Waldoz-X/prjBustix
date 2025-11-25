@@ -58,11 +58,107 @@ export interface ReporteOcupacionParams {
 	eventoId?: number;
 }
 
-// Los tipos de respuesta dependerán de lo que retorne el backend
-// Por ahora usamos 'any' pero deberían definirse según la estructura real
-export type ReporteVentasDto = any;
-export type ReporteOcupacionDto = any;
-export type DashboardDto = any;
+export interface VentaPorDiaDto {
+	fecha: string;
+	cantidadBoletos: number;
+	totalVenta: number;
+}
+
+export interface VentaPorEventoDto {
+	eventoId: number;
+	eventoNombre: string;
+	cantidadBoletos: number;
+	totalVenta: number;
+}
+
+export interface ReporteVentasDto {
+	periodo: {
+		desde: string;
+		hasta: string;
+	};
+	totalBoletos: number;
+	boletosVendidos: number;
+	boletosCancelados: number;
+	ingresoTotal: number;
+	ingresoBase: number;
+	descuentosAplicados: number;
+	cargosServicio: number;
+	ventasPorEvento: VentaPorEventoDto[];
+	ventasPorDia: VentaPorDiaDto[];
+}
+
+export interface OcupacionPorViajeDto {
+	viajeID: number;
+	codigoViaje: string;
+	eventoNombre: string;
+	rutaNombre: string;
+	fechaSalida: string;
+	cupoTotal: number;
+	asientosVendidos: number;
+	asientosDisponibles: number;
+	unidadPlacas: string;
+	porcentajeOcupacion: number;
+}
+
+export interface OcupacionPorEventoDto {
+	eventoId: number;
+	eventoNombre: string;
+	totalViajes: number;
+	totalAsientos: number;
+	asientosVendidos: number;
+	porcentajeOcupacion: number;
+}
+
+export interface ReporteOcupacionDto {
+	periodo: {
+		desde: string;
+		hasta: string;
+	};
+	totalViajes: number;
+	viajesCompletos: number;
+	promedioOcupacion: number;
+	totalAsientosDisponibles: number;
+	totalAsientosVendidos: number;
+	ocupacionPorViaje: OcupacionPorViajeDto[];
+	ocupacionPorEvento: OcupacionPorEventoDto[];
+}
+
+export interface DashboardMetricasDto {
+	boletosHoy: number;
+	boletosMes: number;
+	ingresosMes: number;
+	viajesProximos: number;
+	viajesHoy: number;
+	usuariosActivos: number;
+	usuariosNuevosMes: number;
+	incidenciasAbiertas: number;
+	eventosActivos: number;
+}
+
+export interface UltimoEventoDto {
+	eventoID: number;
+	nombre: string;
+	fecha: string;
+	ciudad: string;
+	totalViajes: number;
+}
+
+export interface ProximoViajeDto {
+	viajeID: number;
+	codigoViaje: string;
+	eventoNombre: string;
+	rutaNombre: string;
+	fechaSalida: string;
+	asientosVendidos: number;
+	cupoTotal: number;
+	ocupacion: number;
+}
+
+export interface DashboardDto {
+	metricas: DashboardMetricasDto;
+	ultimosEventos: UltimoEventoDto[];
+	proximosViajes: ProximoViajeDto[];
+}
 
 // ==================== FUNCIONES ====================
 
