@@ -57,11 +57,11 @@ export interface BroadcastNotificacionDto {
 	enviarEmail?: boolean;
 }
 
-export interface CreateNotificacionDto {
+export interface CrearNotificacionDto {
 	usuarioID: string;
 	titulo: string;
 	mensaje: string;
-	tipoNotificacion: string;
+	tipoNotificacion?: string;
 	viajeID?: number;
 	boletoID?: number;
 	enviarPush?: boolean;
@@ -142,7 +142,7 @@ const enviarBroadcast = async (payload: BroadcastNotificacionDto): Promise<void>
  * POST /api/Notificaciones
  * Crear una notificación para un usuario específico
  */
-const crearNotificacion = async (payload: CreateNotificacionDto): Promise<NotificacionDto> => {
+const crearNotificacion = async (payload: CrearNotificacionDto): Promise<NotificacionDto> => {
 	console.log("[NotificacionesService] Creating notification:", payload);
 
 	// Validaciones cliente
@@ -161,10 +161,6 @@ const crearNotificacion = async (payload: CreateNotificacionDto): Promise<Notifi
 
 	if (!payload.mensaje || payload.mensaje.trim() === "") {
 		throw { status: 400, message: "El mensaje es requerido.", details: { field: "mensaje" } };
-	}
-
-	if (!payload.tipoNotificacion || payload.tipoNotificacion.trim() === "") {
-		throw { status: 400, message: "El tipo de notificación es requerido.", details: { field: "tipoNotificacion" } };
 	}
 
 	const response = await fetch(BASE_URL, {
