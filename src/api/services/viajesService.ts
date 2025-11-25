@@ -104,20 +104,14 @@ export interface UpdateViajeDto {
 }
 
 export interface ParadaDto {
-	paradaID: number;
-	viajeID: number;
-	ubicacionNombre: string;
+	paradaViajeID: number;
+	nombreParada: string;
 	direccion: string;
-	ciudad: string;
-	ubicacionLat: number;
-	ubicacionLong: number;
-	orden: number;
-	horaEstimadaLlegada: string;
-	horaRealLlegada?: string;
-	pasajerosSuben: number;
-	pasajerosBajan: number;
-	estatus: number;
-	estatusNombre: string;
+	latitud: number;
+	longitud: number;
+	ordenParada: number;
+	horaEstimadaLlegada: string | null;
+	esActiva: boolean;
 }
 
 export interface PasajeroManifiestoDto {

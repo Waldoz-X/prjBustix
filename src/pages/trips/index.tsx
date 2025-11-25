@@ -1,9 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { Bus, Calendar, Edit, Eye, Filter, MapPin, MoreHorizontal, Plus, Trash2, User, Users, X } from "lucide-react";
-import { useState } from "react";
+import {
+	Bus,
+	Calendar,
+	Copy,
+	Edit,
+	Eye,
+	Filter,
+	MapPin,
+	MoreHorizontal,
+	Plus,
+	Tag,
+	Trash2,
+	User,
+	UserPlus,
+	Users,
+	X,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import userService from "@/api/services/userService";
 import viajesService, { type ViajeDto, type ViajesFilterParams } from "@/api/services/viajesService";
 import { useHasRole } from "@/hooks/use-session";
 import {
@@ -19,7 +36,7 @@ import {
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -35,6 +52,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/ui/separator";
 import { CreateTripModal } from "./create-trip-modal";
 import { EditTripModal } from "./edit-trip-modal";
+import { PricingModal } from "./pricing-modal";
 
 export default function TripsPage() {
 	const isAdmin = useHasRole("Admin");
@@ -50,12 +68,26 @@ export default function TripsPage() {
 	const [tripToDelete, setTripToDelete] = useState<ViajeDto | null>(null);
 	const [tripToEdit, setTripToEdit] = useState<ViajeDto | null>(null);
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+	const [tripToAssignStaff, setTripToAssignStaff] = useState<ViajeDto | null>(null);
+	const [isAssignStaffModalOpen, setIsAssignStaffModalOpen] = useState(false);
+	const [tripToConfigurePrices, setTripToConfigurePrices] = useState<ViajeDto | null>(null);
+	const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
 	const { data: viajes = [], isLoading } = useQuery({
 		queryKey: ["viajes", searchTerm, filters],
 		queryFn: () => viajesService.getAllViajes(filters),
 		enabled: allowed,
 	});
+
+	// Fetch users for staff assignment
+	const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+		queryKey: ["users"],
+		queryFn: userService.getAllUsers,
+		enabled: isAssignStaffModalOpen,
+	});
+
+	// Filter users with "Staff" role
+	const staffUsers = useMemo(() => users.filter((u) => u.roles?.includes("Staff")), [users]);
 
 	const deleteMutation = useMutation({
 		mutationFn: viajesService.deleteViaje,
@@ -65,6 +97,43 @@ export default function TripsPage() {
 		},
 		onError: (error: any) => {
 			toast.error(error.message || "Error al eliminar el viaje");
+		},
+	});
+
+	const assignStaffMutation = useMutation({
+		mutationFn: (data: { viajeId: number; staffId: string; rol: string; observaciones?: string }) =>
+			viajesService.assignStaff(data.viajeId, {
+				staffID: data.staffId,
+				rolEnViaje: data.rol,
+				observaciones: data.observaciones,
+			}),
+		onSuccess: () => {
+			toast.success("Staff asignado exitosamente");
+			queryClient.invalidateQueries({ queryKey: ["viajes"] });
+			setIsAssignStaffModalOpen(false);
+		},
+		onError: (error: any) => {
+			console.error("Error asignando staff:", error);
+			if (error.errors) {
+				const errorMessages = Object.values(error.errors).flat().join("\n");
+				toast.error("Error de validación", { description: errorMessages });
+			} else {
+				toast.error(error.message || "Error al asignar staff");
+			}
+		},
+	});
+
+	const copyBasePricesMutation = useMutation({
+		mutationFn: (viajeId: number) => viajesService.copiarPreciosBase(viajeId),
+		onSuccess: () => {
+			toast.success("Precios base copiados exitosamente");
+			queryClient.invalidateQueries({ queryKey: ["viajes"] });
+		},
+		onError: (error: any) => {
+			console.error("Error copiando precios base:", error);
+			toast.error("No se pudieron copiar los precios base", {
+				description: "Verifica que el viaje tenga una ruta con precios configurados.",
+			});
 		},
 	});
 
@@ -95,6 +164,16 @@ export default function TripsPage() {
 
 	const handleDeleteClick = (trip: ViajeDto) => {
 		setTripToDelete(trip);
+	};
+
+	const handleAssignStaffClick = (trip: ViajeDto) => {
+		setTripToAssignStaff(trip);
+		setIsAssignStaffModalOpen(true);
+	};
+
+	const handleConfigurePricesClick = (trip: ViajeDto) => {
+		setTripToConfigurePrices(trip);
+		setIsPricingModalOpen(true);
 	};
 
 	const confirmDelete = () => {
@@ -203,6 +282,18 @@ export default function TripsPage() {
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => handleEditClick(record)}>
 							<Edit className="mr-2 h-4 w-4" /> Editar
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => handleAssignStaffClick(record)}>
+							<UserPlus className="mr-2 h-4 w-4" /> Asignar Staff
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => handleConfigurePricesClick(record)}>
+							<Tag className="mr-2 h-4 w-4" /> Configurar Precios
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={() => copyBasePricesMutation.mutate(record.viajeID)}
+							disabled={copyBasePricesMutation.isPending}
+						>
+							<Copy className="mr-2 h-4 w-4" /> Copiar Precios Base
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(record)}>
@@ -354,6 +445,11 @@ export default function TripsPage() {
 
 			{/* Edit Trip Modal */}
 			<EditTripModal open={isEditModalOpen} onOpenChange={setIsEditModalOpen} trip={tripToEdit} />
+
+			{/* Pricing Configuration Modal */}
+			{isPricingModalOpen && tripToConfigurePrices && (
+				<PricingModal open={isPricingModalOpen} onOpenChange={setIsPricingModalOpen} trip={tripToConfigurePrices} />
+			)}
 
 			{/* View Details Dialog */}
 			<Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
@@ -546,6 +642,98 @@ export default function TripsPage() {
 							</div>
 						</div>
 					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* Assign Staff Modal */}
+			<Dialog open={isAssignStaffModalOpen} onOpenChange={setIsAssignStaffModalOpen}>
+				<DialogContent className="sm:max-w-[500px]">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<UserPlus className="h-5 w-5" />
+							Asignar Staff al Viaje
+						</DialogTitle>
+						<DialogDescription>
+							{tripToAssignStaff && (
+								<>
+									Asignar personal al viaje <strong>{tripToAssignStaff.codigoViaje}</strong> (
+									{tripToAssignStaff.eventoNombre})
+								</>
+							)}
+						</DialogDescription>
+					</DialogHeader>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							if (!tripToAssignStaff) return;
+							const formData = new FormData(e.currentTarget);
+							assignStaffMutation.mutate({
+								viajeId: tripToAssignStaff.viajeID,
+								staffId: formData.get("staffId") as string,
+								rol: formData.get("rol") as string,
+								observaciones: formData.get("observaciones") as string,
+							});
+						}}
+						className="space-y-4"
+					>
+						<div className="space-y-2">
+							<Label htmlFor="staffId">Staff / Usuario</Label>
+							<Select name="staffId" required>
+								<SelectTrigger>
+									<SelectValue placeholder="Selecciona un miembro del staff" />
+								</SelectTrigger>
+								<SelectContent>
+									{isLoadingUsers ? (
+										<div className="p-2 text-center text-sm text-muted-foreground">Cargando usuarios...</div>
+									) : staffUsers.length === 0 ? (
+										<div className="p-2 text-center text-sm text-muted-foreground">
+											No hay usuarios con rol Staff disponibles
+										</div>
+									) : (
+										staffUsers.map((user) => (
+											<SelectItem key={user.id} value={user.id}>
+												{user.nombreCompleto} ({user.email})
+											</SelectItem>
+										))
+									)}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-muted-foreground">Selecciona el usuario que deseas asignar al viaje</p>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="rol">Rol en Viaje</Label>
+							<Select name="rol" required>
+								<SelectTrigger>
+									<SelectValue placeholder="Selecciona un rol" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Coordinador">Coordinador</SelectItem>
+									<SelectItem value="Staff de Apoyo">Staff de Apoyo</SelectItem>
+									<SelectItem value="Paramédico">Paramédico</SelectItem>
+									<SelectItem value="Seguridad">Seguridad</SelectItem>
+									<SelectItem value="Guía Turístico">Guía Turístico</SelectItem>
+									<SelectItem value="Asistente">Asistente</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="observaciones">Observaciones (Opcional)</Label>
+							<Input id="observaciones" name="observaciones" placeholder="Notas adicionales" />
+						</div>
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setIsAssignStaffModalOpen(false)}
+								disabled={assignStaffMutation.isPending}
+							>
+								Cancelar
+							</Button>
+							<Button type="submit" disabled={assignStaffMutation.isPending}>
+								{assignStaffMutation.isPending ? "Asignando..." : "Asignar Staff"}
+							</Button>
+						</DialogFooter>
+					</form>
 				</DialogContent>
 			</Dialog>
 
