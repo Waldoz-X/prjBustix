@@ -393,6 +393,37 @@ const checkinBoleto = async (id: number, payload: CheckinBoletoDto): Promise<voi
 	await handleResponse(response);
 };
 
+/**
+ * POST /api/Boletos/{id}/marcar-no-show
+ * Marcar un boleto como No Show
+ */
+const marcarNoShow = async (id: number, payload: { paradaViajeID: number; motivo: string }): Promise<void> => {
+	console.log("[BoletosService] Marking boleto as No Show:", id, payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.paradaViajeID || payload.paradaViajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaViajeID" } };
+	}
+
+	if (!payload.motivo || payload.motivo.trim() === "") {
+		throw { status: 400, message: "El motivo es requerido.", details: { field: "motivo" } };
+	}
+
+	// Note: This endpoint is not in Swagger but requested by user.
+	// If it fails, we might need to use a different approach.
+	const response = await fetch(`${BASE_URL}/${id}/marcar-no-show`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	await handleResponse(response);
+};
+
 const boletosService = {
 	calcularPrecio,
 	getBoletoById,
@@ -403,6 +434,7 @@ const boletosService = {
 	validarBoletoById,
 	validarBoleto,
 	checkinBoleto,
+	marcarNoShow,
 };
 
 export default boletosService;

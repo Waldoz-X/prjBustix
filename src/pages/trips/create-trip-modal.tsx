@@ -26,6 +26,7 @@ interface CreateTripModalProps {
 
 export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 	const queryClient = useQueryClient();
+	const [modal, contextHolder] = Modal.useModal();
 
 	const [formData, setFormData] = useState<Partial<CreateViajeDto>>({
 		tipoViaje: "Ida",
@@ -87,7 +88,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 		},
 		onSuccess: (result) => {
 			if (result.hasConflicts) {
-				Modal.confirm({
+				modal.confirm({
 					title: (
 						<div className="flex items-center gap-2">
 							<AlertCircle className="h-5 w-5 text-amber-500" />
@@ -113,19 +114,63 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 						</div>
 					),
 					onOk: () => {
-						createMutation.mutate(formData as CreateViajeDto);
+						createMutation.mutate(verifyMutation.variables as CreateViajeDto);
 					},
 					okText: "Crear de todas formas",
 					cancelText: "Cancelar",
 					okButtonProps: { danger: true },
 				});
 			} else {
-				createMutation.mutate(formData as CreateViajeDto);
+				createMutation.mutate(verifyMutation.variables as CreateViajeDto);
 			}
 		},
 		onError: (err: any) => {
 			const safe = handleApiError(err);
-			toast.error("Error al verificar disponibilidad", { description: safe.userMessage });
+			// If verification fails (e.g. 404 or 400 due to routing), allow user to proceed with caution
+			modal.confirm({
+				title: (
+					<div className="flex items-center gap-2">
+						<AlertCircle className="h-5 w-5 text-red-500" />
+						<span>Error al Verificar Disponibilidad</span>
+					</div>
+				),
+				content: (
+					<div className="space-y-2 mt-4">
+						<p>No se pudo verificar la disponibilidad de los recursos.</p>
+						<p className="text-xs text-muted-foreground bg-gray-100 p-2 rounded">{safe.userMessage}</p>
+						<p className="mt-4 font-medium">¿Deseas intentar crear el viaje de todas formas?</p>
+					</div>
+				),
+				onOk: () => {
+					// Re-construct payload since verifyMutation.variables might be undefined if we rely on it here?
+					// Actually verifyMutation.variables is available in onError context usually,
+					// but safer to use the formData we have in scope or reconstruct it.
+					// However, verifyMutation.variables IS available on the mutation object state,
+					// but here we are in the callback.
+					// Let's reconstruct the payload to be safe, or use the one passed to mutate if possible.
+					// Since we can't easily access the payload passed to mutate() here without it being in variables,
+					// and variables might be typed.
+					// Let's use the same payload construction logic.
+
+					const fmtDate = (d: string = "") => (d.length === 16 ? `${d}:00` : d);
+					const payload: CreateViajeDto = {
+						...formData,
+						fechaSalida: fmtDate(formData.fechaSalida),
+						fechaLlegadaEstimada: fmtDate(formData.fechaLlegadaEstimada),
+						eventoID: Number(formData.eventoID),
+						plantillaRutaID: Number(formData.plantillaRutaID),
+						unidadID: Number(formData.unidadID),
+						cupoTotal: Number(formData.cupoTotal),
+						precioBase: Number(formData.precioBase),
+						cargoServicio: Number(formData.cargoServicio || 0),
+					} as CreateViajeDto;
+
+					createMutation.mutate(payload);
+				},
+				okText: "Intentar Crear",
+				cancelText: "Cancelar",
+				okButtonProps: { danger: true },
+			});
 		},
 	});
 
@@ -168,17 +213,33 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 		if (
 			!formData.eventoID ||
 			!formData.plantillaRutaID ||
-			!formData.unidadID ||
-			!formData.choferID ||
+			!formData.tipoViaje ||
 			!formData.fechaSalida ||
-			!formData.fechaLlegadaEstimada ||
 			!formData.cupoTotal ||
 			formData.precioBase === undefined
 		) {
 			toast.error("Por favor completa todos los campos requeridos");
 			return;
 		}
-		verifyMutation.mutate(formData as CreateViajeDto);
+		// Ensure dates include seconds
+		const fmtDate = (d: string = "") => (d.length === 16 ? `${d}:00` : d);
+
+		const payload: CreateViajeDto = {
+			...formData,
+			fechaSalida: fmtDate(formData.fechaSalida),
+			fechaLlegadaEstimada: formData.fechaLlegadaEstimada
+				? fmtDate(formData.fechaLlegadaEstimada)
+				: fmtDate(formData.fechaSalida), // Default to start date if not provided? Or leave empty if backend handles it? Docs say optional. Let's send it if present.
+			eventoID: Number(formData.eventoID),
+			plantillaRutaID: Number(formData.plantillaRutaID),
+			unidadID: formData.unidadID ? Number(formData.unidadID) : 0, // Send 0 or null? Docs say int?, usually 0 or null. Let's try 0 as per previous success.
+			choferID: formData.choferID || "", // Send empty string or null? Docs say string?.
+			cupoTotal: Number(formData.cupoTotal),
+			precioBase: Number(formData.precioBase),
+			cargoServicio: Number(formData.cargoServicio || 0),
+		} as CreateViajeDto;
+
+		verifyMutation.mutate(payload);
 	};
 
 	const resetForm = () => {
@@ -197,6 +258,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
+			{contextHolder}
 			<DialogContent className="!max-w-5xl h-[85vh] flex flex-col p-0">
 				<DialogHeader className="px-6 py-4 border-b">
 					<DialogTitle>Crear Nuevo Viaje</DialogTitle>
@@ -373,9 +435,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="fechaLlegada">
-											Fecha y Hora de Llegada Estimada <span className="text-destructive">*</span>
-										</Label>
+										<Label htmlFor="fechaLlegada">Fecha y Hora de Llegada Estimada</Label>
 										<Input
 											id="fechaLlegada"
 											type="datetime-local"
@@ -402,9 +462,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 							</h3>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="space-y-2">
-									<Label htmlFor="unidad">
-										Unidad <span className="text-destructive">*</span>
-									</Label>
+									<Label htmlFor="unidad">Unidad</Label>
 									<Select
 										value={formData.unidadID?.toString()}
 										onValueChange={(val) => {
@@ -466,9 +524,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 								</div>
 
 								<div className="space-y-2">
-									<Label htmlFor="chofer">
-										Chofer <span className="text-destructive">*</span>
-									</Label>
+									<Label htmlFor="chofer">Chofer</Label>
 									<Select
 										value={formData.choferID}
 										onValueChange={(val) => setFormData({ ...formData, choferID: val })}

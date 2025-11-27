@@ -10,6 +10,7 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 
 		// Eventos Masivos
 		{ path: "events", element: Component("/pages/management/events") },
+
 		{ path: "rutas", element: Component("/pages/rutas") },
 		{ path: "tickets", element: Component("/pages/tickets") },
 		{ path: "analytics/events", element: Component("/pages/analytics/events") },
@@ -17,7 +18,14 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		// Recursos Operativos
 		{ path: "fleet", element: Component("/pages/unidades") },
 		{ path: "calendar-general", element: Component("/pages/calendar/general") },
-		{ path: "incidents", element: Component("/pages/incidents") },
+		{
+			path: "incidents",
+			children: [
+				{ index: true, element: Component("/pages/incidents") },
+				{ path: "types", element: Component("/pages/incidents/types") },
+				{ path: "my-reports", element: Component("/pages/incidents/my-reports") },
+			],
+		},
 
 		// Operadores (mapea a src/pages/operators con subrutas)
 		{

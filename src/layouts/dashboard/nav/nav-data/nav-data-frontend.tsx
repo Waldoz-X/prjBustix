@@ -166,6 +166,22 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/incidents",
 				icon: <Icon icon="solar:danger-triangle-bold-duotone" size="24" />,
 				auth: ["Admin", "Manager", "Operator", "Staff"],
+				children: [
+					{
+						title: "Gestión de Incidencias",
+						path: "/incidents",
+					},
+					{
+						title: "Mis Reportes",
+						path: "/incidents/my-reports",
+						auth: ["Operator", "Staff", "Admin", "Manager"],
+					},
+					{
+						title: "Tipos de Incidencias",
+						path: "/incidents/types",
+						auth: ["Admin", "Manager"],
+					},
+				],
 			},
 			{
 				title: "Calendario General",

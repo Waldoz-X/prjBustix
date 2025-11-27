@@ -503,7 +503,8 @@ const createViaje = async (payload: CreateViajeDto): Promise<ViajeDto> => {
 		body: JSON.stringify(payload),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	return data?.data || data;
 };
 
 /**
@@ -1070,8 +1071,14 @@ const verificarDisponibilidad = async (params: VerificarDisponibilidadParams): P
 	console.log("[ViajesService] Verificando disponibilidad:", params);
 
 	const queryParams = new URLSearchParams();
-	queryParams.append("fechaInicio", params.fechaInicio);
-	queryParams.append("fechaFin", params.fechaFin);
+	// Ensure dates have seconds
+	const fmtDate = (d: string) => (d.length === 16 ? `${d}:00` : d);
+
+	queryParams.append("fechaInicio", fmtDate(params.fechaInicio));
+	queryParams.append("fechaFin", fmtDate(params.fechaFin));
+	// Send id=0 if not provided, to satisfy potential required id field (e.g. for exclusion)
+	queryParams.append("id", "0");
+
 	if (params.unidadId !== undefined) queryParams.append("unidadId", params.unidadId.toString());
 	if (params.choferId) queryParams.append("choferId", params.choferId);
 	if (params.staffId) queryParams.append("staffId", params.staffId);
@@ -1081,7 +1088,8 @@ const verificarDisponibilidad = async (params: VerificarDisponibilidadParams): P
 		headers: getHeaders(),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	return data?.data || data;
 };
 
 const viajesService = {

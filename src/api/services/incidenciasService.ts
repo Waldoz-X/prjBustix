@@ -192,7 +192,9 @@ const getAll = async (filtros?: IncidenciasFiltros): Promise<IncidenciaListaDto[
 	});
 
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+	// Handle wrapped response { data: [...] } or direct array [...]
+	const items = data?.data || data;
+	return Array.isArray(items) ? items : [];
 };
 
 /**
@@ -242,7 +244,8 @@ const create = async (payload: CreateIncidenciaDto): Promise<IncidenciaDetalleDt
 		body: JSON.stringify(payload),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	return data?.data || data;
 };
 
 /**
@@ -257,7 +260,8 @@ const getById = async (id: number): Promise<IncidenciaDetalleDto> => {
 		headers: getHeaders(),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	return data?.data || data;
 };
 
 /**
@@ -287,7 +291,8 @@ const update = async (id: number, payload: UpdateIncidenciaDto): Promise<Inciden
 		body: JSON.stringify(payload),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	return data?.data || data;
 };
 
 /**
@@ -302,7 +307,8 @@ const getEstadisticas = async (): Promise<EstadisticasIncidenciasDto> => {
 		headers: getHeaders(),
 	});
 
-	return await handleResponse(response);
+	const data = await handleResponse(response);
+	return data?.data || data;
 };
 
 /**
@@ -318,7 +324,9 @@ const getByViaje = async (viajeId: number): Promise<IncidenciaDetalleDto[]> => {
 	});
 
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+	// Handle wrapped response { data: [...] } or direct array [...]
+	const items = data?.data || data;
+	return Array.isArray(items) ? items : [];
 };
 
 /**
@@ -334,15 +342,17 @@ const getMisReportes = async (): Promise<IncidenciaDetalleDto[]> => {
 	});
 
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+	// Handle wrapped response { data: [...] } or direct array [...]
+	const items = data?.data || data;
+	return Array.isArray(items) ? items : [];
 };
 
 /**
  * GET /api/Incidencias/tipos
- * Obtener tipos de incidencias disponibles
+ * Obtener tipos de incidencias activos
  */
 const getTipos = async (): Promise<TipoIncidenciaDto[]> => {
-	console.log("[IncidenciasService] Fetching tipos de incidencias");
+	console.log("[IncidenciasService] Fetching tipos de incidencias (activos)");
 
 	const response = await fetch(`${BASE_URL}/tipos`, {
 		method: "GET",
@@ -350,7 +360,93 @@ const getTipos = async (): Promise<TipoIncidenciaDto[]> => {
 	});
 
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+	// Handle wrapped response { data: [...] } or direct array [...]
+	const items = data?.data || data;
+	return Array.isArray(items) ? items : [];
+};
+
+/**
+ * GET /api/Incidencias/tipos/todos
+ * Obtener todos los tipos de incidencias (incluyendo inactivos)
+ */
+const getTodosTipos = async (): Promise<TipoIncidenciaDto[]> => {
+	console.log("[IncidenciasService] Fetching todos los tipos de incidencias");
+
+	const response = await fetch(`${BASE_URL}/tipos/todos`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	const data = await handleResponse(response);
+	// Handle wrapped response { data: [...] } or direct array [...]
+	const items = data?.data || data;
+	return Array.isArray(items) ? items : [];
+};
+
+/**
+ * POST /api/Incidencias/tipos
+ * Crear un nuevo tipo de incidencia
+ */
+const createTipo = async (payload: {
+	codigo: string;
+	nombre: string;
+	categoria: string;
+	prioridad: string;
+	esActivo?: boolean;
+}): Promise<TipoIncidenciaDto> => {
+	console.log("[IncidenciasService] Creating tipo de incidencia:", payload);
+
+	const response = await fetch(`${BASE_URL}/tipos`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	const data = await handleResponse(response);
+	return data?.data || data;
+};
+
+/**
+ * PUT /api/Incidencias/tipos/{id}
+ * Actualizar un tipo de incidencia
+ */
+const updateTipo = async (
+	id: number,
+	payload: {
+		codigo: string;
+		nombre: string;
+		categoria: string;
+		prioridad: string;
+		esActivo: boolean;
+	},
+): Promise<TipoIncidenciaDto> => {
+	console.log("[IncidenciasService] Updating tipo de incidencia:", id, payload);
+
+	const response = await fetch(`${BASE_URL}/tipos/${id}`, {
+		method: "PUT",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	const data = await handleResponse(response);
+	return data?.data || data;
+};
+
+/**
+ * DELETE /api/Incidencias/tipos/{id}
+ * Eliminar un tipo de incidencia
+ */
+const deleteTipo = async (id: number): Promise<void> => {
+	console.log("[IncidenciasService] Deleting tipo de incidencia:", id);
+
+	const response = await fetch(`${BASE_URL}/tipos/${id}`, {
+		method: "DELETE",
+		headers: getHeaders(),
+	});
+
+	if (!response.ok) {
+		throw await handleResponse(response);
+	}
 };
 
 const incidenciasService = {
@@ -362,6 +458,10 @@ const incidenciasService = {
 	getByViaje,
 	getMisReportes,
 	getTipos,
+	getTodosTipos,
+	createTipo,
+	updateTipo,
+	deleteTipo,
 };
 
 export default incidenciasService;
