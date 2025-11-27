@@ -1,72 +1,108 @@
-// import { ROLE_LIST } from "@/_mock/assets";
-
-import Table, { type ColumnsType } from "antd/es/table";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Table } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
-import type { Role_Old } from "#/entity";
-import { BasicStatus } from "#/enum";
+import { toast } from "sonner";
+import roleService, { type RoleDto } from "@/api/services/roleService";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
 import { RoleModal, type RoleModalProps } from "./role-modal";
 
-// TODO: fix
-// const ROLES: Role_Old[] = ROLE_LIST as Role_Old[];
-const ROLES: Role_Old[] = [];
-
-const DEFAULE_ROLE_VALUE: Role_Old = {
-	id: "",
-	name: "",
-	code: "",
-	status: BasicStatus.ENABLE,
-	permission: [],
-};
 export default function RolePage() {
-	const [roleModalPros, setRoleModalProps] = useState<RoleModalProps>({
-		formValue: { ...DEFAULE_ROLE_VALUE },
+	const queryClient = useQueryClient();
+	const [roleModalProps, setRoleModalProps] = useState<RoleModalProps>({
+		formValue: { name: "", id: "" } as RoleDto,
 		title: "New",
 		show: false,
-		onOk: () => {
-			setRoleModalProps((prev) => ({ ...prev, show: false }));
-		},
+		onOk: () => {},
 		onCancel: () => {
 			setRoleModalProps((prev) => ({ ...prev, show: false }));
 		},
 	});
-	const columns: ColumnsType<Role_Old> = [
+
+	const { data: rolesResponse, isLoading } = useQuery({
+		queryKey: ["roles"],
+		queryFn: () => roleService.getAll(),
+	});
+
+	const roles = rolesResponse?.data || [];
+
+	const createMutation = useMutation({
+		mutationFn: roleService.create,
+		onSuccess: () => {
+			toast.success("Role created successfully");
+			queryClient.invalidateQueries({ queryKey: ["roles"] });
+			setRoleModalProps((prev) => ({ ...prev, show: false }));
+		},
+		onError: (error: any) => {
+			toast.error(error.message || "Failed to create role");
+		},
+	});
+
+	const updateMutation = useMutation({
+		mutationFn: ({ id, data }: { id: string; data: { name: string } }) => roleService.update(id, data),
+		onSuccess: () => {
+			toast.success("Role updated successfully");
+			queryClient.invalidateQueries({ queryKey: ["roles"] });
+			setRoleModalProps((prev) => ({ ...prev, show: false }));
+		},
+		onError: (error: any) => {
+			toast.error(error.message || "Failed to update role");
+		},
+	});
+
+	const deleteMutation = useMutation({
+		mutationFn: roleService.delete,
+		onSuccess: () => {
+			toast.success("Role deleted successfully");
+			queryClient.invalidateQueries({ queryKey: ["roles"] });
+		},
+		onError: (error: any) => {
+			toast.error(error.message || "Failed to delete role");
+		},
+	});
+
+	const columns: ColumnsType<RoleDto> = [
 		{
 			title: "Name",
 			dataIndex: "name",
 			width: 300,
 		},
 		{
-			title: "Label",
-			dataIndex: "label",
+			title: "Description",
+			dataIndex: "descripcion",
 		},
-		{ title: "Order", dataIndex: "order", width: 60 },
+		{
+			title: "Users",
+			dataIndex: "usuariosAsignados",
+			width: 100,
+			align: "center",
+		},
 		{
 			title: "Status",
-			dataIndex: "status",
+			dataIndex: "activo",
 			align: "center",
 			width: 120,
-			render: (status) => (
-				<Badge variant={status === BasicStatus.DISABLE ? "error" : "success"}>
-					{status === BasicStatus.DISABLE ? "Disable" : "Enable"}
-				</Badge>
-			),
+			render: (activo) => <Badge variant={activo ? "success" : "error"}>{activo ? "Active" : "Inactive"}</Badge>,
 		},
-		{ title: "Desc", dataIndex: "desc" },
 		{
 			title: "Action",
 			key: "operation",
 			align: "center",
 			width: 100,
 			render: (_, record) => (
-				<div className="flex w-full justify-center text-gray">
+				<div className="flex w-full justify-center text-gray-500">
 					<Button variant="ghost" size="icon" onClick={() => onEdit(record)}>
 						<Icon icon="solar:pen-bold-duotone" size={18} />
 					</Button>
-					<Button variant="ghost" size="icon">
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => deleteMutation.mutate(record.id)}
+						disabled={deleteMutation.isPending}
+					>
 						<Icon icon="mingcute:delete-2-fill" size={18} className="text-error!" />
 					</Button>
 				</div>
@@ -75,24 +111,31 @@ export default function RolePage() {
 	];
 
 	const onCreate = () => {
-		setRoleModalProps((prev) => ({
-			...prev,
+		setRoleModalProps({
 			show: true,
-			title: "Create New",
-			formValue: {
-				...prev.formValue,
-				...DEFAULE_ROLE_VALUE,
+			title: "Create New Role",
+			formValue: { name: "", id: "" } as RoleDto,
+			onOk: (data: RoleDto) => {
+				createMutation.mutate({ name: data.name });
 			},
-		}));
+			onCancel: () => {
+				setRoleModalProps((prev) => ({ ...prev, show: false }));
+			},
+		});
 	};
 
-	const onEdit = (formValue: Role_Old) => {
-		setRoleModalProps((prev) => ({
-			...prev,
+	const onEdit = (record: RoleDto) => {
+		setRoleModalProps({
 			show: true,
-			title: "Edit",
-			formValue,
-		}));
+			title: "Edit Role",
+			formValue: record,
+			onOk: (data: RoleDto) => {
+				updateMutation.mutate({ id: record.id, data: { name: data.name } });
+			},
+			onCancel: () => {
+				setRoleModalProps((prev) => ({ ...prev, show: false }));
+			},
+		});
 	};
 
 	return (
@@ -110,10 +153,11 @@ export default function RolePage() {
 					scroll={{ x: "max-content" }}
 					pagination={false}
 					columns={columns}
-					dataSource={ROLES}
+					dataSource={roles}
+					loading={isLoading}
 				/>
 			</CardContent>
-			<RoleModal {...roleModalPros} />
+			<RoleModal {...roleModalProps} />
 		</Card>
 	);
 }

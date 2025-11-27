@@ -1,38 +1,112 @@
-import type { BoletoResponseDto, CalculoPrecioDto, IniciarCompraDto, IniciarCompraResponseDto } from "@/types/boletos";
+/**
+ * Servicio de API para gestión de boletos
+ * Base URL: https://waldoz-001-site1.stempurl.com/api/Boletos
+ */
 
-// Tipos auxiliares para endpoints faltantes
-type CambiarAsientoDto = { nuevoAsiento: string };
-type CambiarAsientoResponse = {
-	success: boolean;
-	message: string;
-	asientoAnterior: string;
-	asientoNuevo: string;
+const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Boletos";
+
+/**
+ * Obtener el token de autenticación del localStorage
+ */
+const getToken = (): string | null => {
+	return localStorage.getItem("token");
 };
 
-type ValidarBoletoDto = {
+const getHeaders = () => {
+	const token = getToken();
+	const headers: Record<string, string> = {
+		"Content-Type": "application/json",
+	};
+	if (token) headers.Authorization = `Bearer ${token}`;
+	return headers;
+};
+
+const handleResponse = async (response: Response) => {
+	if (!response.ok) {
+		let parsed: any;
+		try {
+			parsed = await response.json();
+		} catch (_e) {
+			try {
+				parsed = { title: await response.text() };
+			} catch {
+				parsed = null;
+			}
+		}
+		console.error("API Error:", parsed || response.statusText);
+		throw {
+			status: response.status,
+			statusText: response.statusText,
+			...(parsed || {}),
+		};
+	}
+	const text = await response.text();
+	return text ? JSON.parse(text) : null;
+};
+
+// ==================== TIPOS ====================
+
+export interface CalcularPrecioDto {
+	viajeID: number;
+	codigoViaje: string;
+	ciudadOrigen: string;
+	ciudadDestino: string;
+	fechaSalida: string;
+	precioBase: number;
+	cargoServicio: number;
+	descuento: number;
+	descuentoPorcentaje: number;
+	subtotal: number;
+	iva: number;
+	precioTotal: number;
+	cuponAplicado: string;
+	paradaAbordaje: string;
+	ventasAbiertas: boolean;
+	asientosDisponibles: number;
+}
+
+export interface BoletoDto {
+	boletoID: number;
+	codigoBoleto: string;
+	codigoQR: string;
+	viajeID: number;
+	codigoViaje: string;
+	ciudadOrigen: string;
+	ciudadDestino: string;
+	fechaSalida: string;
+	numeroAsiento: string;
+	nombrePasajero: string;
+	emailPasajero: string;
+	telefonoPasajero: string;
+	precioBase: number;
+	descuento: number;
+	cargoServicio: number;
+	iva: number;
+	precioTotal: number;
+	estatus: number;
+	estatusNombre: string;
+	fechaCompra: string;
+	fechaValidacion: string;
+	paradaAbordaje: string;
+	horaEstimadaAbordaje: string;
+}
+
+export interface CancelarBoletoDto {
+	motivo: string;
+}
+
+export interface CambiarAsientoDto {
+	nuevoAsiento: string;
+}
+
+export interface ValidarBoletoByIdDto {
 	codigoQR: string;
 	latitud: number;
 	longitud: number;
 	observaciones?: string;
-};
-type ValidarBoletoResponseDto = {
-	success: boolean;
-	data: {
-		esValido: boolean;
-		mensaje: string;
-		boletoID: number;
-		nombrePasajero: string;
-		numeroAsiento: string;
-		codigoViaje: string;
-		ciudadOrigen: string;
-		ciudadDestino: string;
-		fechaSalida: string;
-		fechaValidacion: string;
-		validadoPor: string;
-	};
-};
+}
 
-type ValidacionDto = {
+export interface ValidarBoletoDto {
 	viajeID: number;
 	codigoQR: string;
 	tipoValidacion: string;
@@ -40,8 +114,9 @@ type ValidacionDto = {
 	estacionLong: number;
 	observaciones?: string;
 	deviceValidationId?: string;
-};
-type ValidacionResponseDto = {
+}
+
+export interface ValidacionResultDto {
 	success: boolean;
 	message: string;
 	validacionID: number;
@@ -51,289 +126,315 @@ type ValidacionResponseDto = {
 	clienteNombre: string;
 	asientoAsignado: string;
 	estadoBoleto: string;
-};
-
-type CheckInDto = {
-	observaciones?: string;
-	latitud?: number;
-	longitud?: number;
-};
-type CheckInResponseDto = {
-	success: boolean;
-	message: string;
-	boletoId: number;
-	fechaCheckIn: string;
-	clienteNombre: string;
-	numeroAsiento: string;
-};
-/**
- * Cambia el asiento de un boleto
- * Endpoint: PUT /api/boletos/{id}/cambiar-asiento
- */
-const cambiarAsiento = async (id: number, dto: CambiarAsientoDto): Promise<CambiarAsientoResponse> => {
-	const response = await fetch(`${BASE_URL}/${id}/cambiar-asiento`, {
-		method: "PUT",
-		headers: getHeaders(),
-		body: JSON.stringify(dto),
-	});
-	if (!response.ok) throw new Error("Error al cambiar asiento");
-	return response.json();
-};
-
-/**
- * Valida un boleto por ID y QR (marca como usado)
- * Endpoint: POST /api/boletos/{id}/validar
- */
-const validarBoletoPorId = async (id: number, dto: ValidarBoletoDto): Promise<ValidarBoletoResponseDto> => {
-	const response = await fetch(`${BASE_URL}/${id}/validar`, {
-		method: "POST",
-		headers: getHeaders(),
-		body: JSON.stringify(dto),
-	});
-	if (!response.ok) throw new Error("Error al validar boleto");
-	return response.json();
-};
-
-/**
- * Valida un boleto por QR (principal para staff)
- * Endpoint: POST /api/boletos/validar
- */
-const validarBoletoPorQR = async (dto: ValidacionDto): Promise<ValidacionResponseDto> => {
-	const response = await fetch(`${BASE_URL}/validar`, {
-		method: "POST",
-		headers: getHeaders(),
-		body: JSON.stringify(dto),
-	});
-	if (!response.ok) throw new Error("Error al validar boleto por QR");
-	return response.json();
-};
-
-/**
- * Realiza check-in de pasajero
- * Endpoint: POST /api/boletos/{id}/checkin
- */
-const checkinBoleto = async (id: number, dto?: CheckInDto): Promise<CheckInResponseDto> => {
-	const response = await fetch(`${BASE_URL}/${id}/checkin`, {
-		method: "POST",
-		headers: getHeaders(),
-		body: JSON.stringify(dto || {}),
-	});
-	if (!response.ok) throw new Error("Error al hacer check-in");
-	return response.json();
-};
-
-// Constants and helpers
-const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/boletos";
-
-const getToken = (): string | null => {
-	return localStorage.getItem("token");
-};
-
-const getHeaders = () => ({
-	"Content-Type": "application/json",
-	Accept: "application/json, text/plain",
-	Authorization: `Bearer ${getToken()}`,
-});
-
-async function parseResponseSafe(response: Response): Promise<any> {
-	const text = await response.text();
-	if (!text) return null;
-	try {
-		return JSON.parse(text);
-	} catch {
-		return text;
-	}
 }
 
-// Service functions
+export interface CheckinBoletoDto {
+	observaciones?: string;
+	latitud: number;
+	longitud: number;
+}
+
+export interface CalcularPrecioParams {
+	viajeId: number;
+	paradaAbordajeId?: number;
+	cuponId?: number;
+}
+
+// ==================== FUNCIONES ====================
 
 /**
- * Calcula el precio de un boleto antes de comprarlo
- * Usa el endpoint GET /api/boletos/calcular-precio
+ * GET /api/Boletos/calcular-precio
+ * Calcular precio de un boleto con descuentos y cargos
  */
-const calcularPrecio = async (
-	viajeId: number,
-	paradaAbordajeId?: number,
-	cuponId?: number,
-): Promise<CalculoPrecioDto> => {
-	const params = new URLSearchParams();
-	params.append("viajeId", viajeId.toString());
-	if (paradaAbordajeId) params.append("paradaAbordajeId", paradaAbordajeId.toString());
-	if (cuponId) params.append("cuponId", cuponId.toString());
-	const response = await fetch(`${BASE_URL}/calcular-precio?${params.toString()}`, {
+const calcularPrecio = async (params: CalcularPrecioParams): Promise<CalcularPrecioDto> => {
+	console.log("[BoletosService] Calculating precio with params:", params);
+
+	if (!params.viajeId || params.viajeId <= 0) {
+		throw { status: 400, message: "El ID del viaje es requerido.", details: { field: "viajeId" } };
+	}
+
+	const queryParams = new URLSearchParams();
+	queryParams.append("viajeId", params.viajeId.toString());
+	if (params.paradaAbordajeId !== undefined) queryParams.append("paradaAbordajeId", params.paradaAbordajeId.toString());
+	if (params.cuponId !== undefined) queryParams.append("cuponId", params.cuponId.toString());
+
+	const response = await fetch(`${BASE_URL}/calcular-precio?${queryParams}`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
-	if (!response.ok) {
-		const error = await parseResponseSafe(response);
-		throw new Error(error?.message || "Error al calcular precio");
-	}
-	return response.json();
+
+	return await handleResponse(response);
 };
 
 /**
- * Inicia el proceso de compra de boletos (reserva y genera código de pago)
- * Usa el endpoint POST /api/boletos/iniciar-compra
- * Este endpoint REQUIERE autenticación (Bearer token)
+ * GET /api/Boletos/{id}
+ * Obtener un boleto por ID
  */
-const iniciarCompra = async (data: IniciarCompraDto): Promise<IniciarCompraResponseDto> => {
-	try {
-		console.log("🔵 URL:", `${BASE_URL}/iniciar-compra`);
-		console.log("🔵 Datos recibidos:", JSON.stringify(data, null, 2));
+const getBoletoById = async (id: number): Promise<BoletoDto> => {
+	console.log("[BoletosService] Fetching boleto by ID:", id);
 
-		const token = getToken();
-		console.log("🔵 Token:", token ? `${token.substring(0, 20)}...` : "NO HAY TOKEN");
-
-		const headers = {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-			Authorization: `Bearer ${token}`,
-		};
-
-		// Construir el payload asegurando que cuponID sea null si no existe
-		const payload = {
-			viajeID: data.viajeID,
-			paradaAbordajeID: data.paradaAbordajeID,
-			cuponID: data.cuponID,
-			pasajeros: data.pasajeros,
-		};
-
-		console.log("🔵 Payload a enviar:", JSON.stringify(payload, null, 2));
-
-		const response = await fetch(`${BASE_URL}/iniciar-compra`, {
-			method: "POST",
-			headers: headers,
-			body: JSON.stringify(payload),
-		});
-
-		console.log("🔵 Response status:", response.status);
-		console.log("🔵 Response headers:", Object.fromEntries(response.headers.entries()));
-
-		if (!response.ok) {
-			const errorText = await response.text();
-			console.error("🔴 Error response body:", errorText);
-
-			let errorMessage = `Error ${response.status}: ${response.statusText}`;
-			try {
-				const errorJson = JSON.parse(errorText);
-				console.error("🔴 Error JSON:", errorJson);
-				errorMessage = errorJson.message || errorJson.title || errorJson.error || errorMessage;
-			} catch {
-				errorMessage = errorText || errorMessage;
-			}
-
-			throw new Error(errorMessage);
-		}
-
-		const result = await response.json();
-		console.log("✅ Respuesta exitosa:", result);
-		return result;
-	} catch (error: any) {
-		console.error("🔴 Error completo en iniciarCompra:", error);
-
-		if (error instanceof TypeError && error.message === "Failed to fetch") {
-			throw new Error("No se pudo conectar con el servidor. Verifica que el backend esté funcionando.");
-		}
-
-		throw error;
-	}
-};
-
-/**
- * Compra uno o varios boletos
- * Usa el endpoint POST /api/boletos
- */
-const comprarBoletos = async (data: any): Promise<any> => {
-	const response = await fetch(BASE_URL, {
-		method: "POST",
-		headers: getHeaders(),
-		body: JSON.stringify(data),
-	});
-	if (!response.ok) {
-		const error = await parseResponseSafe(response);
-		throw new Error(error?.message || "Error al comprar boleto");
-	}
-	return response.json();
-};
-
-/**
- * Obtiene los boletos del usuario autenticado
- * Usa el endpoint GET /api/boletos/me/boletos
- */
-const misBoletos = async (): Promise<{ success: boolean; data: BoletoResponseDto[]; total: number }> => {
-	const response = await fetch(`${BASE_URL}/me/boletos`, {
-		method: "GET",
-		headers: getHeaders(),
-	});
-	if (!response.ok) throw new Error("Error al obtener boletos del usuario");
-	return response.json();
-};
-
-/**
- * Obtiene un boleto específico por ID
- * Usa el endpoint GET /api/boletos/{id}
- */
-const obtenerBoleto = async (id: number): Promise<BoletoResponseDto> => {
 	const response = await fetch(`${BASE_URL}/${id}`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
-	if (!response.ok) throw new Error("Error al obtener boleto");
-	return response.json();
+
+	return await handleResponse(response);
 };
 
 /**
- * Verifica la validez de un boleto (solo staff/admin)
- * Usa el endpoint GET /api/boletos/verificar/{codigoBoleto}
+ * GET /api/Boletos/me/boletos
+ * Obtener boletos del usuario actual
  */
-const verificarBoleto = async (
-	codigoBoleto: string,
-): Promise<{
-	success: boolean;
-	esValido: boolean;
-	data: any;
-}> => {
-	const response = await fetch(`${BASE_URL}/verificar/${codigoBoleto}`, {
+const getMisBoletos = async (): Promise<BoletoDto[]> => {
+	console.log("[BoletosService] Fetching mis boletos");
+
+	const response = await fetch(`${BASE_URL}/me/boletos`, {
 		method: "GET",
 		headers: getHeaders(),
 	});
-	if (!response.ok) throw new Error("Error al verificar boleto");
-	return response.json();
+
+	const data = await handleResponse(response);
+	return Array.isArray(data) ? data : [];
 };
 
 /**
- * Cancelar un boleto y procesar reembolso
- * Usa el endpoint PUT /api/boletos/{id}/cancelar
+ * GET /api/Boletos/verificar/{codigoBoleto}
+ * Verificar validez de un boleto por código
  */
-const cancelarBoleto = async (
-	id: number,
-	dto: { motivo: string },
-): Promise<{
-	success: boolean;
-	message: string;
-	montoReembolso: number;
-	porcentajeReembolso: number;
-	tiempoEstimadoReembolso: string;
-}> => {
+const verificarBoleto = async (codigoBoleto: string): Promise<any> => {
+	console.log("[BoletosService] Verifying boleto:", codigoBoleto);
+
+	if (!codigoBoleto || codigoBoleto.trim() === "") {
+		throw { status: 400, message: "El código del boleto es requerido.", details: { field: "codigoBoleto" } };
+	}
+
+	const response = await fetch(`${BASE_URL}/verificar/${encodeURIComponent(codigoBoleto)}`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * PUT /api/Boletos/{id}/cancelar
+ * Cancelar un boleto
+ */
+const cancelarBoleto = async (id: number, payload: CancelarBoletoDto): Promise<void> => {
+	console.log("[BoletosService] Canceling boleto:", id, payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.motivo || payload.motivo.trim() === "") {
+		throw { status: 400, message: "El motivo de cancelación es requerido.", details: { field: "motivo" } };
+	}
+
 	const response = await fetch(`${BASE_URL}/${id}/cancelar`, {
 		method: "PUT",
 		headers: getHeaders(),
-		body: JSON.stringify(dto),
+		body: JSON.stringify(payload),
 	});
-	if (!response.ok) throw new Error("Error al cancelar boleto");
-	return response.json();
+
+	await handleResponse(response);
 };
 
-export default {
+/**
+ * PUT /api/Boletos/{id}/cambiar-asiento
+ * Cambiar asiento de un boleto
+ */
+const cambiarAsiento = async (id: number, payload: CambiarAsientoDto): Promise<void> => {
+	console.log("[BoletosService] Changing asiento for boleto:", id, payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.nuevoAsiento || payload.nuevoAsiento.trim() === "") {
+		throw { status: 400, message: "El nuevo asiento es requerido.", details: { field: "nuevoAsiento" } };
+	}
+
+	const response = await fetch(`${BASE_URL}/${id}/cambiar-asiento`, {
+		method: "PUT",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Boletos/{id}/validar
+ * Validar un boleto por ID
+ */
+const validarBoletoById = async (id: number, payload: ValidarBoletoByIdDto): Promise<void> => {
+	console.log("[BoletosService] Validating boleto by ID:", id, payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.codigoQR || payload.codigoQR.trim() === "") {
+		throw { status: 400, message: "El código QR es requerido.", details: { field: "codigoQR" } };
+	}
+
+	if (typeof payload.latitud !== "number" || payload.latitud < -90 || payload.latitud > 90) {
+		throw {
+			status: 400,
+			message: "La latitud debe ser un número entre -90 y 90.",
+			details: { field: "latitud" },
+		};
+	}
+
+	if (typeof payload.longitud !== "number" || payload.longitud < -180 || payload.longitud > 180) {
+		throw {
+			status: 400,
+			message: "La longitud debe ser un número entre -180 y 180.",
+			details: { field: "longitud" },
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/${id}/validar`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Boletos/validar
+ * Validar un boleto por código QR (endpoint principal de validación)
+ */
+const validarBoleto = async (payload: ValidarBoletoDto): Promise<ValidacionResultDto> => {
+	console.log("[BoletosService] Validating boleto:", payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.viajeID || payload.viajeID <= 0) {
+		throw { status: 400, message: "El ID del viaje es requerido.", details: { field: "viajeID" } };
+	}
+
+	if (!payload.codigoQR || payload.codigoQR.trim() === "") {
+		throw { status: 400, message: "El código QR es requerido.", details: { field: "codigoQR" } };
+	}
+
+	if (!payload.tipoValidacion || payload.tipoValidacion.trim() === "") {
+		throw { status: 400, message: "El tipo de validación es requerido.", details: { field: "tipoValidacion" } };
+	}
+
+	if (typeof payload.estacionLat !== "number" || payload.estacionLat < -90 || payload.estacionLat > 90) {
+		throw {
+			status: 400,
+			message: "La latitud de la estación debe ser un número entre -90 y 90.",
+			details: { field: "estacionLat" },
+		};
+	}
+
+	if (typeof payload.estacionLong !== "number" || payload.estacionLong < -180 || payload.estacionLong > 180) {
+		throw {
+			status: 400,
+			message: "La longitud de la estación debe ser un número entre -180 y 180.",
+			details: { field: "estacionLong" },
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/validar`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/Boletos/{id}/checkin
+ * Realizar check-in de un boleto
+ */
+const checkinBoleto = async (id: number, payload: CheckinBoletoDto): Promise<void> => {
+	console.log("[BoletosService] Check-in boleto:", id, payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (typeof payload.latitud !== "number" || payload.latitud < -90 || payload.latitud > 90) {
+		throw {
+			status: 400,
+			message: "La latitud debe ser un número entre -90 y 90.",
+			details: { field: "latitud" },
+		};
+	}
+
+	if (typeof payload.longitud !== "number" || payload.longitud < -180 || payload.longitud > 180) {
+		throw {
+			status: 400,
+			message: "La longitud debe ser un número entre -180 y 180.",
+			details: { field: "longitud" },
+		};
+	}
+
+	const response = await fetch(`${BASE_URL}/${id}/checkin`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Boletos/{id}/marcar-no-show
+ * Marcar un boleto como No Show
+ */
+const marcarNoShow = async (id: number, payload: { paradaViajeID: number; motivo: string }): Promise<void> => {
+	console.log("[BoletosService] Marking boleto as No Show:", id, payload);
+
+	if (!payload || typeof payload !== "object") {
+		console.error("[BoletosService] Payload inválido:", payload);
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.paradaViajeID || payload.paradaViajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaViajeID" } };
+	}
+
+	if (!payload.motivo || payload.motivo.trim() === "") {
+		throw { status: 400, message: "El motivo es requerido.", details: { field: "motivo" } };
+	}
+
+	// Note: This endpoint is not in Swagger but requested by user.
+	// If it fails, we might need to use a different approach.
+	const response = await fetch(`${BASE_URL}/${id}/marcar-no-show`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	await handleResponse(response);
+};
+
+const boletosService = {
 	calcularPrecio,
-	comprarBoletos,
-	iniciarCompra,
-	misBoletos,
-	obtenerBoleto,
+	getBoletoById,
+	getMisBoletos,
 	verificarBoleto,
 	cancelarBoleto,
 	cambiarAsiento,
-	validarBoletoPorId,
-	validarBoletoPorQR,
+	validarBoletoById,
+	validarBoleto,
 	checkinBoleto,
+	marcarNoShow,
 };
+
+export default boletosService;

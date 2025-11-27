@@ -18,10 +18,9 @@ type Props = {
 	now: Date;
 	view: ViewType;
 	onMove: (action: HandleMoveArg) => void;
-	onCreate: VoidFunction;
 	onViewTypeChange: (view: ViewType) => void;
 };
-export default function CalendarHeader({ now, view, onMove, onCreate, onViewTypeChange }: Props) {
+export default function CalendarHeader({ now, view, onMove, onViewTypeChange }: Props) {
 	const LgBreakPoint = useMediaQuery(up("lg"));
 
 	const items = useMemo<ViewTypeMenu[]>(
@@ -105,15 +104,7 @@ export default function CalendarHeader({ now, view, onMove, onCreate, onViewType
 				</Button>
 			</div>
 
-			<div className="flex items-center">
-				<Button onClick={() => onMove("today")}>Today</Button>
-				<Button className="ml-2" onClick={() => onCreate()}>
-					<div className=" flex items-center justify-center">
-						<Icon icon="material-symbols:add" size={24} />
-						New Event
-					</div>
-				</Button>
-			</div>
+			<div className="flex items-center">{/* Buttons removed as requested */}</div>
 		</div>
 	);
 }

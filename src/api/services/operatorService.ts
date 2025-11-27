@@ -1,9 +1,9 @@
 /**
  * Servicio de API para gestión de Operadores
- * Base URL: http://localhost:5289/api/Operadores
+ * Base URL: https://waldoz-001-site1.stempurl.com/api/Operadores
  */
 
-const BASE_URL = "http://localhost:5289/api/Operadores";
+const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Operadores";
 
 const getToken = (): string | null => {
 	return localStorage.getItem("token");
@@ -45,7 +45,20 @@ export interface CreateOperatorDto {
 	// Asegúrate de que estos campos coincidan con lo que espera tu API
 }
 
-// ==================== FUNCIONES ====================
+/**
+ * GET /api/Operadores
+ * Obtener todos los operadores
+ */
+const getAll = async (): Promise<OperatorDto[]> => {
+	console.log("[OperatorService] Fetching all operators");
+
+	const response = await fetch(BASE_URL, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
 
 /**
  * POST /api/Operadores
@@ -64,8 +77,9 @@ const createOperator = async (data: CreateOperatorDto): Promise<OperatorDto> => 
 };
 
 const operatorService = {
+	getAll,
 	create: createOperator,
-	// Aquí podrías añadir `getAll`, `getById`, `update`, `delete` en el futuro
+	// Aquí podrías añadir `getById`, `update`, `delete` en el futuro
 };
 
 export default operatorService;

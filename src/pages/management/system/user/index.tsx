@@ -1,34 +1,35 @@
-// import { USER_LIST } from "@/_mock/assets";
-
+import { useQuery } from "@tanstack/react-query";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { Role_Old, UserInfo } from "#/entity";
-import { BasicStatus } from "#/enum";
+import userService, { type UserDto, UserStatus } from "@/api/services/userService";
 import { Icon } from "@/components/icon";
 import { usePathname, useRouter } from "@/routes/hooks";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
 
-// TODO: fix
-// const USERS: UserInfo[] = USER_LIST as UserInfo[];
-const USERS: UserInfo[] = [];
-
 export default function UserPage() {
 	const { push } = useRouter();
 	const pathname = usePathname();
 
-	const columns: ColumnsType<UserInfo> = [
+	const { data: users = [], isLoading } = useQuery({
+		queryKey: ["users"],
+		queryFn: userService.getAllUsers,
+	});
+
+	const columns: ColumnsType<UserDto> = [
 		{
 			title: "Name",
-			dataIndex: "name",
+			dataIndex: "nombreCompleto",
 			width: 300,
 			render: (_, record) => {
 				return (
 					<div className="flex">
-						<img alt="" src={record.avatar} className="h-10 w-10 rounded-full" />
+						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500">
+							<Icon icon="solar:user-bold-duotone" size={24} />
+						</div>
 						<div className="ml-2 flex flex-col">
-							<span className="text-sm">{record.username}</span>
+							<span className="text-sm">{record.nombreCompleto}</span>
 							<span className="text-xs text-text-secondary">{record.email}</span>
 						</div>
 					</div>
@@ -37,21 +38,45 @@ export default function UserPage() {
 		},
 		{
 			title: "Role",
-			dataIndex: "role",
+			dataIndex: "roles",
 			align: "center",
-			width: 120,
-			render: (role: Role_Old) => <Badge variant="info">{role.name}</Badge>,
+			width: 200,
+			render: (roles: string[]) => (
+				<div className="flex flex-wrap justify-center gap-1">
+					{roles.map((role) => (
+						<Badge key={role} variant="info">
+							{role}
+						</Badge>
+					))}
+				</div>
+			),
 		},
 		{
 			title: "Status",
-			dataIndex: "status",
+			dataIndex: "estatus",
 			align: "center",
 			width: 120,
-			render: (status) => (
-				<Badge variant={status === BasicStatus.DISABLE ? "error" : "success"}>
-					{status === BasicStatus.DISABLE ? "Disable" : "Enable"}
-				</Badge>
-			),
+			render: (status: UserStatus) => {
+				let variant: "success" | "error" | "warning" | "info" = "info";
+				let label = "Unknown";
+
+				switch (status) {
+					case UserStatus.Activo:
+						variant = "success";
+						label = "Activo";
+						break;
+					case UserStatus.Inactivo:
+						variant = "warning";
+						label = "Inactivo";
+						break;
+					case UserStatus.Bloqueado:
+						variant = "error";
+						label = "Bloqueado";
+						break;
+				}
+
+				return <Badge variant={variant}>{label}</Badge>;
+			},
 		},
 		{
 			title: "Action",
@@ -95,7 +120,8 @@ export default function UserPage() {
 					scroll={{ x: "max-content" }}
 					pagination={false}
 					columns={columns}
-					dataSource={USERS}
+					dataSource={users}
+					loading={isLoading}
 				/>
 			</CardContent>
 		</Card>

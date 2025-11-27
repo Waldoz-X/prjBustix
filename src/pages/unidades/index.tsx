@@ -1,9 +1,20 @@
+// noinspection NonAsciiCharacters
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bus, CheckCircle2, Loader2, Pencil, Plus, Search, Trash2, XCircle } from "lucide-react";
+import { Bus, CheckCircle2, Eye, Loader2, Pencil, Plus, Search, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { CreateUnidadDto, UnidadResponseDto, UpdateUnidadDto } from "@/api/services/unidadService";
-import { unidadService } from "@/api/services/unidadService";
+import type { CreateUnidadDto, UnidadDto, UpdateUnidadDto } from "@/api/services/unidadService";
+import unidadService from "@/api/services/unidadService";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/ui/alert-dialog";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -18,7 +29,11 @@ import {
 } from "@/ui/dialog";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
-// ...existing code...
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+
+const CURRENT_YEAR = new Date().getFullYear();
+const MIN_YEAR = 1900;
+const MAX_SEATS = 40;
 
 export default function FleetPage() {
 	const queryClient = useQueryClient();
@@ -26,7 +41,22 @@ export default function FleetPage() {
 	// Estados para crear/editar unidad
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [selectedUnidad, setSelectedUnidad] = useState<UnidadResponseDto | null>(null);
+	const [isViewOpen, setIsViewOpen] = useState(false);
+	const [selectedUnidad, setSelectedUnidad] = useState<UnidadDto | null>(null);
+	const [viewUnidad, setViewUnidad] = useState<UnidadDto | null>(null);
+
+	// Estados para confirmación de eliminación
+	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+	const [unidadToDelete, setUnidadToDelete] = useState<UnidadDto | null>(null);
+
+	// Estados para manejo de errores
+	const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+	const [errorDetails, setErrorDetails] = useState<{
+		title: string;
+		message: string;
+		details?: string;
+	} | null>(null);
+
 	const ESTATUS_OPTIONS = [
 		{ value: 1, label: "Activo" },
 		{ value: 2, label: "Inactivo" },
@@ -34,18 +64,18 @@ export default function FleetPage() {
 	];
 
 	const initialUnidad: CreateUnidadDto = {
-		NumeroEconomico: "",
-		Placas: "",
-		Marca: "",
-		Modelo: "",
-		Año: undefined,
-		TipoUnidad: "",
-		CapacidadAsientos: 0,
-		TieneClimatizacion: false,
-		TieneBaño: false,
-		TieneWifi: false,
-		UrlFoto: "",
-		Estatus: 1,
+		numeroEconomico: "",
+		placas: "",
+		marca: "",
+		modelo: "",
+		año: CURRENT_YEAR,
+		tipoUnidad: "",
+		capacidadAsientos: 40,
+		tieneClimatizacion: false,
+		tieneBaño: false,
+		tieneWifi: false,
+		urlFoto: "",
+		estatus: 1,
 	};
 	const [newUnidad, setNewUnidad] = useState<CreateUnidadDto>({ ...initialUnidad });
 	const [editUnidad, setEditUnidad] = useState<UpdateUnidadDto>({ ...initialUnidad });
@@ -61,38 +91,35 @@ export default function FleetPage() {
 	});
 
 	// Normaliza los datos para compatibilidad con backend (propiedades minúsculas)
-	const unidadesRaw = (unidadesResponse?.data ?? []).map((unidad: any) => ({
-		Id: unidad.id ?? unidad.Id,
-		NumeroEconomico: unidad.numeroEconomico ?? unidad.NumeroEconomico,
-		Placas: unidad.placas ?? unidad.Placas,
-		Marca: unidad.marca ?? unidad.Marca,
-		Modelo: unidad.modelo ?? unidad.Modelo,
-		Año: unidad.año ?? unidad.Año,
-		TipoUnidad: unidad.tipoUnidad ?? unidad.TipoUnidad,
-		CapacidadAsientos: unidad.capacidadAsientos ?? unidad.CapacidadAsientos,
-		TieneClimatizacion: unidad.tieneClimatizacion ?? unidad.TieneClimatizacion,
-		TieneBaño: unidad.tieneBaño ?? unidad.TieneBaño,
-		TieneWifi: unidad.tieneWifi ?? unidad.TieneWifi,
-		UrlFoto: unidad.urlFoto ?? unidad.UrlFoto,
-		Estatus: unidad.estatus ?? unidad.Estatus,
-		FechaAlta: unidad.fechaAlta ?? unidad.FechaAlta,
-	}));
+	const unidadesRaw = Array.isArray(unidadesResponse) ? unidadesResponse : [];
 
-	// Filtrado por buscador
+	// Filtrado por buscador con manejo de null
 	const unidades = searchTerm.trim()
-		? unidadesRaw.filter(
-				(u) =>
-					u.NumeroEconomico.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					u.Placas.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(u.Marca ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(u.Modelo ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
-			)
+		? unidadesRaw.filter((u) => {
+				const search = searchTerm.toLowerCase();
+				return (
+					(u.numeroEconomico?.toLowerCase() ?? "").includes(search) ||
+					(u.placas?.toLowerCase() ?? "").includes(search) ||
+					(u.marca?.toLowerCase() ?? "").includes(search) ||
+					(u.modelo?.toLowerCase() ?? "").includes(search)
+				);
+			})
 		: unidadesRaw;
 
 	// Estadísticas
 	const totalUnidades = unidadesRaw.length;
-	const activas = unidadesRaw.filter((u) => u.Estatus === 1).length;
-	const inactivas = unidadesRaw.filter((u) => u.Estatus !== 1).length;
+	const activas = unidadesRaw.filter((u) => u.estatus === 1).length;
+	const inactivas = unidadesRaw.filter((u) => u.estatus !== 1).length;
+
+	// Helper para validar URL
+	const isValidUrl = (url: string): boolean => {
+		try {
+			new URL(url);
+			return true;
+		} catch {
+			return false;
+		}
+	};
 
 	// Mutation para crear unidad
 	const createMutation = useMutation({
@@ -103,8 +130,14 @@ export default function FleetPage() {
 			setIsCreateOpen(false);
 			setNewUnidad({ ...initialUnidad });
 		},
-		onError: (err) => {
-			toast.error(`Error al crear unidad: ${err.message}`);
+		onError: (err: any) => {
+			console.error("Error creating unidad:", err);
+			setErrorDetails({
+				title: "Error al Crear Unidad",
+				message: err.message || "No se pudo crear la unidad",
+				details: err.details ? JSON.stringify(err.details, null, 2) : undefined,
+			});
+			setErrorDialogOpen(true);
 		},
 	});
 
@@ -118,8 +151,14 @@ export default function FleetPage() {
 			setSelectedUnidad(null);
 			setEditUnidad({ ...initialUnidad });
 		},
-		onError: (err) => {
-			toast.error(`Error al actualizar unidad: ${err.message}`);
+		onError: (err: any) => {
+			console.error("Error updating unidad:", err);
+			setErrorDetails({
+				title: "Error al Actualizar Unidad",
+				message: err.message || "No se pudo actualizar la unidad",
+				details: err.details ? JSON.stringify(err.details, null, 2) : undefined,
+			});
+			setErrorDialogOpen(true);
 		},
 	});
 
@@ -129,54 +168,82 @@ export default function FleetPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["unidades"] });
 			toast.success("Unidad eliminada correctamente");
+			setDeleteConfirmOpen(false);
+			setUnidadToDelete(null);
 		},
-		onError: (err) => {
-			toast.error(`Error al eliminar unidad: ${err.message}`);
+		onError: (err: any) => {
+			console.error("Error deleting unidad:", err);
+			setErrorDetails({
+				title: "Error al Eliminar Unidad",
+				message: err.message || "No se pudo eliminar la unidad",
+				details: err.details ? JSON.stringify(err.details, null, 2) : undefined,
+			});
+			setErrorDialogOpen(true);
+			setDeleteConfirmOpen(false);
+			setUnidadToDelete(null);
 		},
 	});
 
 	// Handlers
 	const handleCreate = () => {
-		if (!newUnidad.NumeroEconomico.trim()) {
+		// Validaciones
+		if (!newUnidad.numeroEconomico.trim()) {
 			toast.error("El número económico es obligatorio");
 			return;
 		}
-		if (!newUnidad.Placas.trim()) {
+		if (!newUnidad.placas.trim()) {
 			toast.error("Las placas son obligatorias");
 			return;
 		}
-		if (!newUnidad.TipoUnidad.trim()) {
+		if (!newUnidad.tipoUnidad.trim()) {
 			toast.error("El tipo de unidad es obligatorio");
 			return;
 		}
-		if (!newUnidad.CapacidadAsientos || newUnidad.CapacidadAsientos <= 0) {
+		if (!newUnidad.capacidadAsientos || newUnidad.capacidadAsientos <= 0) {
 			toast.error("La capacidad de asientos debe ser mayor a 0");
 			return;
 		}
-		if (!ESTATUS_OPTIONS.some((opt) => opt.value === newUnidad.Estatus)) {
+		if (newUnidad.capacidadAsientos > MAX_SEATS) {
+			toast.error(`La capacidad máxima es de ${MAX_SEATS} asientos`);
+			return;
+		}
+		if (newUnidad.año && (newUnidad.año < MIN_YEAR || newUnidad.año > CURRENT_YEAR)) {
+			toast.error(`El año debe estar entre ${MIN_YEAR} y ${CURRENT_YEAR}`);
+			return;
+		}
+		if (newUnidad.urlFoto?.trim() && !isValidUrl(newUnidad.urlFoto)) {
+			toast.error("La URL de la foto no es válida");
+			return;
+		}
+		if (!ESTATUS_OPTIONS.some((opt) => opt.value === newUnidad.estatus)) {
 			toast.error("Selecciona un estatus válido");
 			return;
 		}
 		createMutation.mutate(newUnidad);
 	};
 
-	const handleEdit = (unidad: any) => {
+	const handleEdit = (unidad: UnidadDto) => {
 		setSelectedUnidad(unidad);
 		setEditUnidad({
-			NumeroEconomico: unidad.NumeroEconomico ?? "",
-			Placas: unidad.Placas ?? "",
-			Marca: unidad.Marca ?? "",
-			Modelo: unidad.Modelo ?? "",
-			Año: unidad.Año,
-			TipoUnidad: unidad.TipoUnidad ?? "",
-			CapacidadAsientos: unidad.CapacidadAsientos ?? 0,
-			TieneClimatizacion: unidad.TieneClimatizacion ?? false,
-			TieneBaño: unidad.TieneBaño ?? false,
-			TieneWifi: unidad.TieneWifi ?? false,
-			UrlFoto: unidad.UrlFoto ?? "",
-			Estatus: unidad.Estatus ?? 1,
+			numeroEconomico: unidad.numeroEconomico ?? "",
+			placas: unidad.placas ?? "",
+			marca: unidad.marca ?? "",
+			modelo: unidad.modelo ?? "",
+			año: unidad.año ?? CURRENT_YEAR,
+			tipoUnidad: unidad.tipoUnidad ?? "",
+			capacidadAsientos: unidad.capacidadAsientos ?? 40,
+			tieneClimatizacion: unidad.tieneClimatizacion ?? false,
+			tieneBaño: unidad.tieneBaño ?? false,
+			tieneWifi: unidad.tieneWifi ?? false,
+			urlFoto: unidad.urlFoto ?? "",
+			estatus: unidad.estatus ?? 1,
 		});
 		setIsEditOpen(true);
+	};
+
+	const handleView = (unidad: UnidadDto) => {
+		setViewUnidad(unidad);
+		setIsViewOpen(true);
 	};
 
 	const handleUpdate = () => {
@@ -184,32 +251,63 @@ export default function FleetPage() {
 			toast.error("No hay unidad seleccionada");
 			return;
 		}
-		if (!editUnidad.NumeroEconomico.trim()) {
+		// Validaciones
+		if (!editUnidad.numeroEconomico.trim()) {
 			toast.error("El número económico es obligatorio");
 			return;
 		}
-		if (!editUnidad.Placas.trim()) {
+		if (!editUnidad.placas.trim()) {
 			toast.error("Las placas son obligatorias");
 			return;
 		}
-		if (!editUnidad.TipoUnidad.trim()) {
+		if (!editUnidad.tipoUnidad.trim()) {
 			toast.error("El tipo de unidad es obligatorio");
 			return;
 		}
-		if (!editUnidad.CapacidadAsientos || editUnidad.CapacidadAsientos <= 0) {
+		if (!editUnidad.capacidadAsientos || editUnidad.capacidadAsientos <= 0) {
 			toast.error("La capacidad de asientos debe ser mayor a 0");
 			return;
 		}
-		if (!ESTATUS_OPTIONS.some((opt) => opt.value === editUnidad.Estatus)) {
+		if (editUnidad.capacidadAsientos > MAX_SEATS) {
+			toast.error(`La capacidad máxima es de ${MAX_SEATS} asientos`);
+			return;
+		}
+		if (editUnidad.año && (editUnidad.año < MIN_YEAR || editUnidad.año > CURRENT_YEAR)) {
+			toast.error(`El año debe estar entre ${MIN_YEAR} y ${CURRENT_YEAR}`);
+			return;
+		}
+		if (editUnidad.urlFoto?.trim() && !isValidUrl(editUnidad.urlFoto)) {
+			toast.error("La URL de la foto no es válida");
+			return;
+		}
+		if (!ESTATUS_OPTIONS.some((opt) => opt.value === editUnidad.estatus)) {
 			toast.error("Selecciona un estatus válido");
 			return;
 		}
-		updateMutation.mutate({ id: selectedUnidad.Id, data: editUnidad });
+		updateMutation.mutate({ id: selectedUnidad.id, data: editUnidad });
 	};
 
-	const handleDelete = (unidad: UnidadResponseDto) => {
-		if (window.confirm(`¿Eliminar la unidad "${unidad.NumeroEconomico}"?`)) {
-			deleteMutation.mutate(unidad.Id);
+	const handleDeleteClick = (unidad: UnidadDto) => {
+		setUnidadToDelete(unidad);
+		setDeleteConfirmOpen(true);
+	};
+
+	const handleDeleteConfirm = () => {
+		if (unidadToDelete) {
+			deleteMutation.mutate(unidadToDelete.id);
+		}
+	};
+
+	const getStatusBadge = (estatus: number) => {
+		switch (estatus) {
+			case 1:
+				return <Badge className="bg-green-500 hover:bg-green-600">Activo</Badge>;
+			case 2:
+				return <Badge variant="secondary">Inactivo</Badge>;
+			case 3:
+				return <Badge variant="destructive">Bloqueado</Badge>;
+			default:
+				return <Badge variant="outline">{estatus}</Badge>;
 		}
 	};
 
@@ -230,7 +328,7 @@ export default function FleetPage() {
 							Crear Unidad
 						</Button>
 					</DialogTrigger>
-					<DialogContent>
+					<DialogContent className="max-h-[90vh] overflow-y-auto">
 						<DialogHeader>
 							<DialogTitle>Crear Nueva Unidad</DialogTitle>
 							<DialogDescription>Ingresa los datos de la nueva unidad.</DialogDescription>
@@ -238,116 +336,159 @@ export default function FleetPage() {
 						<div className="space-y-4 py-4">
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-2">
-									<Label htmlFor="NumeroEconomico">Número Económico</Label>
+									<Label htmlFor="numeroEconomico">
+										Número Económico <span className="text-destructive">*</span>
+									</Label>
 									<Input
-										id="NumeroEconomico"
-										value={newUnidad.NumeroEconomico}
-										onChange={(e) => setNewUnidad({ ...newUnidad, NumeroEconomico: e.target.value })}
+										id="numeroEconomico"
+										placeholder="Ej: ECO-001"
+										value={newUnidad.numeroEconomico}
+										onChange={(e) => setNewUnidad({ ...newUnidad, numeroEconomico: e.target.value })}
+									/>
+									<p className="text-xs text-muted-foreground">Identificador único de la unidad</p>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="placas">
+										Placas <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="placas"
+										placeholder="Ej: ABC-123-XYZ"
+										value={newUnidad.placas}
+										onChange={(e) => setNewUnidad({ ...newUnidad, placas: e.target.value })}
+									/>
+									<p className="text-xs text-muted-foreground">Placas de circulación del vehículo</p>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="marca">Marca</Label>
+									<Input
+										id="marca"
+										placeholder="Ej: Mercedes-Benz"
+										value={newUnidad.marca ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, marca: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Placas">Placas</Label>
+									<Label htmlFor="modelo">Modelo</Label>
 									<Input
-										id="Placas"
-										value={newUnidad.Placas}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Placas: e.target.value })}
+										id="modelo"
+										placeholder="Ej: Sprinter"
+										value={newUnidad.modelo ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, modelo: e.target.value })}
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Marca">Marca</Label>
+									<Label htmlFor="año">Año</Label>
 									<Input
-										id="Marca"
-										value={newUnidad.Marca ?? ""}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Marca: e.target.value })}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="Modelo">Modelo</Label>
-									<Input
-										id="Modelo"
-										value={newUnidad.Modelo ?? ""}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Modelo: e.target.value })}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="Año">Año</Label>
-									<Input
-										id="Año"
+										id="año"
 										type="number"
-										value={newUnidad.Año ?? ""}
+										min={MIN_YEAR}
+										max={CURRENT_YEAR}
+										placeholder={`${MIN_YEAR} - ${CURRENT_YEAR}`}
+										value={newUnidad.año ?? ""}
 										onChange={(e) =>
-											setNewUnidad({ ...newUnidad, Año: e.target.value ? parseInt(e.target.value) : undefined })
+											setNewUnidad({ ...newUnidad, año: e.target.value ? parseInt(e.target.value) : CURRENT_YEAR })
 										}
 									/>
+									<p className="text-xs text-muted-foreground">
+										Año de fabricación ({MIN_YEAR}-{CURRENT_YEAR})
+									</p>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="TipoUnidad">Tipo de Unidad</Label>
+									<Label htmlFor="tipoUnidad">
+										Tipo de Unidad <span className="text-destructive">*</span>
+									</Label>
 									<Input
-										id="TipoUnidad"
-										value={newUnidad.TipoUnidad}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TipoUnidad: e.target.value })}
+										id="tipoUnidad"
+										placeholder="Ej: Autobús, Van, Minibús"
+										value={newUnidad.tipoUnidad}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tipoUnidad: e.target.value })}
 									/>
+									<p className="text-xs text-muted-foreground">Categoría del vehículo</p>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="CapacidadAsientos">Capacidad de Asientos</Label>
+									<Label htmlFor="capacidadAsientos">
+										Capacidad de Asientos <span className="text-destructive">*</span>
+									</Label>
 									<Input
-										id="CapacidadAsientos"
+										id="capacidadAsientos"
 										type="number"
-										value={newUnidad.CapacidadAsientos}
-										onChange={(e) => setNewUnidad({ ...newUnidad, CapacidadAsientos: parseInt(e.target.value) })}
+										min={1}
+										max={MAX_SEATS}
+										placeholder={`1 - ${MAX_SEATS}`}
+										value={newUnidad.capacidadAsientos}
+										onChange={(e) => setNewUnidad({ ...newUnidad, capacidadAsientos: parseInt(e.target.value) || 0 })}
 									/>
+									<p className="text-xs text-muted-foreground">Máximo {MAX_SEATS} asientos</p>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="UrlFoto">URL Foto</Label>
+									<Label htmlFor="urlFoto">URL Foto</Label>
 									<Input
-										id="UrlFoto"
-										value={newUnidad.UrlFoto ?? ""}
-										onChange={(e) => setNewUnidad({ ...newUnidad, UrlFoto: e.target.value })}
+										id="urlFoto"
+										type="url"
+										placeholder="https://i.ibb.co/DfRPtz35/ca.png"
+										value={newUnidad.urlFoto ?? ""}
+										onChange={(e) => setNewUnidad({ ...newUnidad, urlFoto: e.target.value })}
 									/>
+									<p className="text-xs text-muted-foreground">URL de la imagen del vehículo</p>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="Estatus">Estatus</Label>
-									<select
-										id="Estatus"
-										className="w-full border rounded px-2 py-2"
-										value={newUnidad.Estatus}
-										onChange={(e) => setNewUnidad({ ...newUnidad, Estatus: Number(e.target.value) })}
+									<Label htmlFor="estatus">
+										Estatus <span className="text-destructive">*</span>
+									</Label>
+									<Select
+										value={String(newUnidad.estatus)}
+										onValueChange={(value) => setNewUnidad({ ...newUnidad, estatus: Number(value) })}
 									>
-										{ESTATUS_OPTIONS.map((opt) => (
-											<option key={opt.value} value={opt.value}>
-												{opt.label}
-											</option>
-										))}
-									</select>
+										<SelectTrigger id="estatus">
+											<SelectValue placeholder="Selecciona un estatus" />
+										</SelectTrigger>
+										<SelectContent>
+											{ESTATUS_OPTIONS.map((opt) => (
+												<SelectItem key={opt.value} value={String(opt.value)}>
+													{opt.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
 								</div>
 							</div>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
 								<div className="flex items-center gap-2">
-									<Label htmlFor="TieneClimatizacion">Climatización</Label>
 									<Input
-										id="TieneClimatizacion"
+										id="tieneClimatizacion"
 										type="checkbox"
-										checked={newUnidad.TieneClimatizacion}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TieneClimatizacion: e.target.checked })}
+										className="w-4 h-4"
+										checked={newUnidad.tieneClimatizacion}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tieneClimatizacion: e.target.checked })}
 									/>
+									<Label htmlFor="tieneClimatizacion" className="cursor-pointer">
+										Climatización
+									</Label>
 								</div>
 								<div className="flex items-center gap-2">
-									<Label htmlFor="TieneBaño">Baño</Label>
 									<Input
-										id="TieneBaño"
+										id="tieneBaño"
 										type="checkbox"
-										checked={newUnidad.TieneBaño}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TieneBaño: e.target.checked })}
+										className="w-4 h-4"
+										checked={newUnidad.tieneBaño}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tieneBaño: e.target.checked })}
 									/>
+									<Label htmlFor="tieneBaño" className="cursor-pointer">
+										Baño
+									</Label>
 								</div>
 								<div className="flex items-center gap-2">
-									<Label htmlFor="TieneWifi">WiFi</Label>
 									<Input
-										id="TieneWifi"
+										id="tieneWifi"
 										type="checkbox"
-										checked={newUnidad.TieneWifi}
-										onChange={(e) => setNewUnidad({ ...newUnidad, TieneWifi: e.target.checked })}
+										className="w-4 h-4"
+										checked={newUnidad.tieneWifi}
+										onChange={(e) => setNewUnidad({ ...newUnidad, tieneWifi: e.target.checked })}
 									/>
+									<Label htmlFor="tieneWifi" className="cursor-pointer">
+										WiFi
+									</Label>
 								</div>
 							</div>
 						</div>
@@ -430,15 +571,15 @@ export default function FleetPage() {
 					{unidades && unidades.length > 0 ? (
 						unidades.map((unidad) => (
 							<Card
-								key={unidad.Id}
+								key={unidad.id}
 								className="group hover:shadow-lg transition-all duration-200 hover:border-primary/50"
 							>
 								{/* Imagen del camión */}
 								<div className="w-full flex justify-center items-center pt-4">
-									{unidad.UrlFoto ? (
+									{unidad.urlFoto ? (
 										<img
-											src={unidad.UrlFoto}
-											alt={`Foto de ${unidad.NumeroEconomico}`}
+											src={unidad.urlFoto}
+											alt={`Foto de ${unidad.numeroEconomico}`}
 											className="h-32 w-auto object-contain rounded-md border"
 											onError={(e) => {
 												e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/2928/2928889.png";
@@ -450,68 +591,69 @@ export default function FleetPage() {
 								</div>
 								{/* Información debajo de la imagen */}
 								<CardHeader className="pb-3 pt-2">
-									<div className="flex items-center gap-3">
-										<div>
-											<CardTitle className="text-lg leading-none">{unidad.NumeroEconomico}</CardTitle>
-											<Badge variant="secondary" className="mt-1.5 text-xs">
-												{unidad.TipoUnidad}
-											</Badge>
+									<div className="flex items-start justify-between gap-3">
+										<div className="flex-1">
+											<CardTitle className="text-lg leading-none">{unidad.numeroEconomico}</CardTitle>
+											<div className="flex gap-2 mt-1.5">
+												<Badge variant="secondary" className="text-xs">
+													{unidad.tipoUnidad}
+												</Badge>
+												{getStatusBadge(unidad.estatus)}
+											</div>
 										</div>
 									</div>
-									<CardDescription>ID: {unidad.Id}</CardDescription>
+									<CardDescription>ID: {unidad.id}</CardDescription>
 								</CardHeader>
 								<CardContent className="space-y-3">
 									<div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground">
 										<div className="flex gap-2">
-											<span className="font-semibold">Placas:</span> <Badge variant="secondary">{unidad.Placas}</Badge>
+											<span className="font-semibold">Placas:</span> <Badge variant="secondary">{unidad.placas}</Badge>
 										</div>
 										<div>
-											<span className="font-semibold">Marca:</span> {unidad.Marca ?? "-"}
+											<span className="font-semibold">Marca:</span> {unidad.marca ?? "-"}
 										</div>
 										<div>
-											<span className="font-semibold">Modelo:</span> {unidad.Modelo ?? "-"}
+											<span className="font-semibold">Modelo:</span> {unidad.modelo ?? "-"}
 										</div>
 										<div>
-											<span className="font-semibold">Año:</span> {unidad.Año ?? "-"}
+											<span className="font-semibold">Año:</span> {unidad.año ?? "-"}
 										</div>
 										<div>
-											<span className="font-semibold">Asientos:</span> {unidad.CapacidadAsientos}
+											<span className="font-semibold">Asientos:</span> {unidad.capacidadAsientos}
 										</div>
 										<div>
-											<span className="font-semibold">Clima:</span> {unidad.TieneClimatizacion ? "Sí" : "No"}
+											<span className="font-semibold">Clima:</span> {unidad.tieneClimatizacion ? "Sí" : "No"}
 										</div>
 										<div>
-											<span className="font-semibold">Baño:</span> {unidad.TieneBaño ? "Sí" : "No"}
+											<span className="font-semibold">Baño:</span> {unidad.tieneBaño ? "Sí" : "No"}
 										</div>
 										<div>
-											<span className="font-semibold">WiFi:</span> {unidad.TieneWifi ? "Sí" : "No"}
+											<span className="font-semibold">WiFi:</span> {unidad.tieneWifi ? "Sí" : "No"}
 										</div>
-										<div>
-											<span className="font-semibold">Estatus:</span>{" "}
-											{ESTATUS_OPTIONS.find((opt) => opt.value === unidad.Estatus)?.label ?? unidad.Estatus}
-										</div>
-										<div>
+										<div className="col-span-2">
 											<span className="font-semibold">Alta:</span>{" "}
-											{unidad.FechaAlta ? new Date(unidad.FechaAlta).toLocaleDateString() : "-"}
+											{unidad.fechaAlta ? new Date(unidad.fechaAlta).toLocaleDateString() : "-"}
 										</div>
 									</div>
 									<div className="flex gap-2 pt-2">
+										<Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(unidad)}>
+											<Eye className="h-4 w-4 mr-1" /> Ver
+										</Button>
 										<Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(unidad)}>
-											<Pencil className="h-4 w-4" /> Editar
+											<Pencil className="h-4 w-4 mr-1" /> Editar
 										</Button>
 										<Button
 											variant="outline"
 											size="sm"
 											className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-											onClick={() => handleDelete(unidad)}
+											onClick={() => handleDeleteClick(unidad)}
 											disabled={deleteMutation.isPending}
 										>
 											{deleteMutation.isPending ? (
 												<Loader2 className="h-4 w-4 animate-spin" />
 											) : (
 												<Trash2 className="h-4 w-4" />
-											)}{" "}
-											Eliminar
+											)}
 										</Button>
 									</div>
 								</CardContent>
@@ -537,47 +679,140 @@ export default function FleetPage() {
 				</div>
 			)}
 
+			{/* Diálogo para ver detalles de unidad */}
+			<Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+				<DialogContent className="max-h-[90vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle>Detalles de la Unidad</DialogTitle>
+						<DialogDescription>
+							Información completa de la unidad "{viewUnidad ? viewUnidad.numeroEconomico : ""}"
+						</DialogDescription>
+					</DialogHeader>
+					{viewUnidad && (
+						<div className="space-y-4 py-4">
+							{viewUnidad.urlFoto && (
+								<div className="flex justify-center">
+									<img
+										src={viewUnidad.urlFoto}
+										alt={`Foto de ${viewUnidad.numeroEconomico}`}
+										className="h-48 w-auto object-contain rounded-md border"
+										onError={(e) => {
+											e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/2928/2928889.png";
+										}}
+									/>
+								</div>
+							)}
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<Label className="text-muted-foreground">Número Económico</Label>
+									<p className="font-semibold">{viewUnidad.numeroEconomico}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Placas</Label>
+									<p className="font-semibold">{viewUnidad.placas}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Marca</Label>
+									<p className="font-semibold">{viewUnidad.marca ?? "-"}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Modelo</Label>
+									<p className="font-semibold">{viewUnidad.modelo ?? "-"}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Año</Label>
+									<p className="font-semibold">{viewUnidad.año ?? "-"}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Tipo de Unidad</Label>
+									<p className="font-semibold">{viewUnidad.tipoUnidad}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Capacidad de Asientos</Label>
+									<p className="font-semibold">{viewUnidad.capacidadAsientos}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Estatus</Label>
+									<div className="mt-1">{getStatusBadge(viewUnidad.estatus)}</div>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Climatización</Label>
+									<p className="font-semibold">{viewUnidad.tieneClimatizacion ? "Sí" : "No"}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Baño</Label>
+									<p className="font-semibold">{viewUnidad.tieneBaño ? "Sí" : "No"}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">WiFi</Label>
+									<p className="font-semibold">{viewUnidad.tieneWifi ? "Sí" : "No"}</p>
+								</div>
+								<div>
+									<Label className="text-muted-foreground">Fecha de Alta</Label>
+									<p className="font-semibold">
+										{viewUnidad.fechaAlta ? new Date(viewUnidad.fechaAlta).toLocaleDateString() : "-"}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+					<DialogFooter>
+						<Button onClick={() => setIsViewOpen(false)}>Cerrar</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			{/* Diálogo para editar unidad */}
 			<Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-				<DialogContent>
+				<DialogContent className="max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>Editar Unidad</DialogTitle>
 						<DialogDescription>
-							Modifica los datos de la unidad "{selectedUnidad ? selectedUnidad.NumeroEconomico : ""}"
+							Modifica los datos de la unidad "{selectedUnidad ? selectedUnidad.numeroEconomico : ""}"
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div className="space-y-2">
-								<Label htmlFor="editNumeroEconomico">Número Económico</Label>
+								<Label htmlFor="editNumeroEconomico">
+									Número Económico <span className="text-destructive">*</span>
+								</Label>
 								<Input
 									id="editNumeroEconomico"
-									value={editUnidad.NumeroEconomico}
-									onChange={(e) => setEditUnidad({ ...editUnidad, NumeroEconomico: e.target.value })}
+									placeholder="Ej: ECO-001"
+									value={editUnidad.numeroEconomico}
+									onChange={(e) => setEditUnidad({ ...editUnidad, numeroEconomico: e.target.value })}
 								/>
+								<p className="text-xs text-muted-foreground">Identificador único de la unidad</p>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="editPlacas">Placas</Label>
+								<Label htmlFor="editPlacas">
+									Placas <span className="text-destructive">*</span>
+								</Label>
 								<Input
 									id="editPlacas"
-									value={editUnidad.Placas}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Placas: e.target.value })}
+									placeholder="Ej: ABC-123-XYZ"
+									value={editUnidad.placas}
+									onChange={(e) => setEditUnidad({ ...editUnidad, placas: e.target.value })}
 								/>
+								<p className="text-xs text-muted-foreground">Placas de circulación del vehículo</p>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editMarca">Marca</Label>
 								<Input
 									id="editMarca"
-									value={editUnidad.Marca ?? ""}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Marca: e.target.value })}
+									placeholder="Ej: Mercedes-Benz"
+									value={editUnidad.marca ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, marca: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editModelo">Modelo</Label>
 								<Input
 									id="editModelo"
-									value={editUnidad.Modelo ?? ""}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Modelo: e.target.value })}
+									placeholder="Ej: Sprinter"
+									value={editUnidad.modelo ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, modelo: e.target.value })}
 								/>
 							</div>
 							<div className="space-y-2">
@@ -585,80 +820,113 @@ export default function FleetPage() {
 								<Input
 									id="editAño"
 									type="number"
-									value={editUnidad.Año ?? ""}
+									min={MIN_YEAR}
+									max={CURRENT_YEAR}
+									placeholder={`${MIN_YEAR} - ${CURRENT_YEAR}`}
+									value={editUnidad.año ?? ""}
 									onChange={(e) =>
-										setEditUnidad({ ...editUnidad, Año: e.target.value ? parseInt(e.target.value) : undefined })
+										setEditUnidad({ ...editUnidad, año: e.target.value ? parseInt(e.target.value) : CURRENT_YEAR })
 									}
 								/>
+								<p className="text-xs text-muted-foreground">
+									Año de fabricación ({MIN_YEAR}-{CURRENT_YEAR})
+								</p>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="editTipoUnidad">Tipo de Unidad</Label>
+								<Label htmlFor="editTipoUnidad">
+									Tipo de Unidad <span className="text-destructive">*</span>
+								</Label>
 								<Input
 									id="editTipoUnidad"
-									value={editUnidad.TipoUnidad}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TipoUnidad: e.target.value })}
+									placeholder="Ej: Autobús, Van, Minibús"
+									value={editUnidad.tipoUnidad}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tipoUnidad: e.target.value })}
 								/>
+								<p className="text-xs text-muted-foreground">Categoría del vehículo</p>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="editCapacidadAsientos">Capacidad de Asientos</Label>
+								<Label htmlFor="editCapacidadAsientos">
+									Capacidad de Asientos <span className="text-destructive">*</span>
+								</Label>
 								<Input
 									id="editCapacidadAsientos"
 									type="number"
-									value={editUnidad.CapacidadAsientos}
-									onChange={(e) => setEditUnidad({ ...editUnidad, CapacidadAsientos: parseInt(e.target.value) })}
+									min={1}
+									max={MAX_SEATS}
+									placeholder={`1 - ${MAX_SEATS}`}
+									value={editUnidad.capacidadAsientos}
+									onChange={(e) => setEditUnidad({ ...editUnidad, capacidadAsientos: parseInt(e.target.value) || 0 })}
 								/>
+								<p className="text-xs text-muted-foreground">Máximo {MAX_SEATS} asientos</p>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="editUrlFoto">URL Foto</Label>
 								<Input
 									id="editUrlFoto"
-									value={editUnidad.UrlFoto ?? ""}
-									onChange={(e) => setEditUnidad({ ...editUnidad, UrlFoto: e.target.value })}
+									type="url"
+									placeholder="https://i.ibb.co/DfRPtz35/ca.png"
+									value={editUnidad.urlFoto ?? ""}
+									onChange={(e) => setEditUnidad({ ...editUnidad, urlFoto: e.target.value })}
 								/>
+								<p className="text-xs text-muted-foreground">URL de la imagen del vehículo</p>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="editEstatus">Estatus</Label>
-								<select
-									id="editEstatus"
-									className="w-full border rounded px-2 py-2"
-									value={editUnidad.Estatus}
-									onChange={(e) => setEditUnidad({ ...editUnidad, Estatus: Number(e.target.value) })}
+								<Label htmlFor="editEstatus">
+									Estatus <span className="text-destructive">*</span>
+								</Label>
+								<Select
+									value={String(editUnidad.estatus)}
+									onValueChange={(value) => setEditUnidad({ ...editUnidad, estatus: Number(value) })}
 								>
-									{ESTATUS_OPTIONS.map((opt) => (
-										<option key={opt.value} value={opt.value}>
-											{opt.label}
-										</option>
-									))}
-								</select>
+									<SelectTrigger id="editEstatus">
+										<SelectValue placeholder="Selecciona un estatus" />
+									</SelectTrigger>
+									<SelectContent>
+										{ESTATUS_OPTIONS.map((opt) => (
+											<SelectItem key={opt.value} value={String(opt.value)}>
+												{opt.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
 							<div className="flex items-center gap-2">
-								<Label htmlFor="editTieneClimatizacion">Climatización</Label>
 								<Input
 									id="editTieneClimatizacion"
 									type="checkbox"
-									checked={editUnidad.TieneClimatizacion}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TieneClimatizacion: e.target.checked })}
+									className="w-4 h-4"
+									checked={editUnidad.tieneClimatizacion}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tieneClimatizacion: e.target.checked })}
 								/>
+								<Label htmlFor="editTieneClimatizacion" className="cursor-pointer">
+									Climatización
+								</Label>
 							</div>
 							<div className="flex items-center gap-2">
-								<Label htmlFor="editTieneBaño">Baño</Label>
 								<Input
 									id="editTieneBaño"
 									type="checkbox"
-									checked={editUnidad.TieneBaño}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TieneBaño: e.target.checked })}
+									className="w-4 h-4"
+									checked={editUnidad.tieneBaño}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tieneBaño: e.target.checked })}
 								/>
+								<Label htmlFor="editTieneBaño" className="cursor-pointer">
+									Baño
+								</Label>
 							</div>
 							<div className="flex items-center gap-2">
-								<Label htmlFor="editTieneWifi">WiFi</Label>
 								<Input
 									id="editTieneWifi"
 									type="checkbox"
-									checked={editUnidad.TieneWifi}
-									onChange={(e) => setEditUnidad({ ...editUnidad, TieneWifi: e.target.checked })}
+									className="w-4 h-4"
+									checked={editUnidad.tieneWifi}
+									onChange={(e) => setEditUnidad({ ...editUnidad, tieneWifi: e.target.checked })}
 								/>
+								<Label htmlFor="editTieneWifi" className="cursor-pointer">
+									WiFi
+								</Label>
 							</div>
 						</div>
 					</div>
@@ -673,6 +941,54 @@ export default function FleetPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* AlertDialog para confirmación de eliminación */}
+			<AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Esta acción eliminará permanentemente la unidad "{unidadToDelete?.numeroEconomico}" (
+							{unidadToDelete?.placas}). Esta acción no se puede deshacer.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={() => setUnidadToDelete(null)}>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleDeleteConfirm}
+							className="bg-destructive hover:bg-destructive/90"
+							disabled={deleteMutation.isPending}
+						>
+							{deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							Eliminar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* AlertDialog para mostrar errores */}
+			<AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle className="flex items-center gap-2 text-destructive">
+							<XCircle className="h-5 w-5" />
+							{errorDetails?.title}
+						</AlertDialogTitle>
+						<AlertDialogDescription className="space-y-2">
+							<p>{errorDetails?.message}</p>
+							{errorDetails?.details && (
+								<div className="mt-4">
+									<p className="text-sm font-semibold mb-2">Detalles técnicos:</p>
+									<pre className="bg-muted p-3 rounded text-xs overflow-auto max-h-40">{errorDetails.details}</pre>
+								</div>
+							)}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => setErrorDialogOpen(false)}>Entendido</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

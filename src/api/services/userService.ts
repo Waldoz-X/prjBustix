@@ -507,7 +507,148 @@ const resendConfirmationEmail = async (email: string, nota?: string): Promise<{ 
 	const data = await handleResponse(response);
 	console.log(`[UserService] Resend result:`, data);
 
-	return data;
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/forgot-password
+ * Solicitar recuperación de contraseña
+ */
+const forgotPassword = async (email: string): Promise<LoginResponse> => {
+	const response = await fetch(`${BASE_URL}/forgot-password`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({ email }),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/change-password
+ * Cambiar contraseña (requiere autenticación)
+ */
+const changePassword = async (data: { email: string; currentPassword: string; newPassword: string }): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/change-password`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/reset-password
+ * Restablecer contraseña con token
+ */
+const resetPassword = async (data: { email: string; token: string; newPassword: string }): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/reset-password`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify(data),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * GET /api/Account/detail
+ * Obtener detalles del usuario actual
+ */
+const getDetail = async (): Promise<UserDto> => {
+	const response = await fetch(`${BASE_URL}/detail`, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/refresh-token
+ * Refrescar token de autenticación
+ */
+const refreshToken = async (email: string, refreshToken: string): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/refresh-token`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({ email, refreshToken }),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/revoke-token/{userId}
+ * Revocar token de un usuario
+ */
+const revokeToken = async (userId: string): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/revoke-token/${userId}`, {
+		method: "POST",
+		headers: getHeaders(),
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * GET /api/Account/confirm-email
+ * Confirmar email (GET con query params)
+ */
+const confirmEmailGet = async (email: string, token: string): Promise<void> => {
+	const queryParams = new URLSearchParams({ email, token });
+	const response = await fetch(`${BASE_URL}/confirm-email?${queryParams}`, {
+		method: "GET",
+		headers: {
+			Accept: "application/json",
+		},
+	});
+
+	await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/resend-confirmation-email
+ * Reenviar email de confirmación (público)
+ */
+const resendConfirmationEmailPublic = async (email: string): Promise<LoginResponse> => {
+	const response = await fetch(`${BASE_URL}/resend-confirmation-email`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify(email),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
+ * POST /api/Account/confirm-email-direct
+ * Confirmar email directamente (público)
+ */
+const confirmEmailDirectPublic = async (email: string, token: string): Promise<LoginResponse> => {
+	const response = await fetch(`${BASE_URL}/confirm-email-direct`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({ email, token }),
+	});
+
+	return await handleResponse(response);
 };
 
 const userService = {
@@ -515,11 +656,15 @@ const userService = {
 	logout,
 	register,
 	confirmEmail,
+	confirmEmailGet,
 	confirmEmailDirect,
 	resendConfirmationEmail,
+	resendConfirmationEmailPublic,
+	confirmEmailDirectPublic,
 	getAllUsers,
 	getUsersByStatus,
 	getUserById,
+	getDetail,
 	getStats,
 	getStatuses,
 	getPermissions,
@@ -532,6 +677,11 @@ const userService = {
 	getLockedUsers,
 	getLockoutInfo,
 	getUsersAtRisk,
+	forgotPassword,
+	changePassword,
+	resetPassword,
+	refreshToken,
+	revokeToken,
 };
 
 export default userService;
