@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import eventosService from "@/api/services/eventosService";
 import reportesService from "@/api/services/reportesService";
 import { Chart, useChart } from "@/components/chart";
 import Icon from "@/components/icon/icon";
 import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Text, Title } from "@/ui/typography";
@@ -14,74 +15,87 @@ import { rgbAlpha } from "@/utils/theme";
 import TicketsBanner from "./components/tickets-banner";
 
 export default function TicketsPage() {
+	// Filtros
+	const [timeRange, setTimeRange] = useState("30d");
 	const [selectedEventId, setSelectedEventId] = useState<string>("all");
 
-	// Fetch Events for Filter
+	// Calcular fechas
+	const { startDate, endDate } = useMemo(() => {
+		const end = new Date();
+		const start = new Date();
+		const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+		start.setDate(end.getDate() - days);
+		return { startDate: start, endDate: end };
+	}, [timeRange]);
+
+	// Fetch Eventos
 	const { data: events, isLoading: isLoadingEvents } = useQuery({
 		queryKey: ["events-filter"],
 		queryFn: () => eventosService.getAllEventos(),
 	});
 
-	// Fetch Sales Report with optional filter
+	// Fetch Reporte Ventas
 	const { data: salesData, isLoading: isLoadingReport } = useQuery({
-		queryKey: ["tickets-report", selectedEventId],
+		queryKey: ["tickets-report", selectedEventId, startDate.toISOString(), endDate.toISOString()],
 		queryFn: () =>
 			reportesService.getReporteVentas({
 				eventoId: selectedEventId === "all" ? undefined : Number(selectedEventId),
+				fechaDesde: startDate.toISOString(),
+				fechaHasta: endDate.toISOString(),
 			}),
 	});
 
 	const isLoading = isLoadingEvents || isLoadingReport;
 
-	// --- Metrics Calculation ---
+	// --- Métricas ---
 	const totalRevenue = salesData?.ingresoTotal || 0;
 	const totalTickets = salesData?.boletosVendidos || 0;
 	const cancelledTickets = salesData?.boletosCancelados || 0;
 	const avgTicketPrice = totalTickets > 0 ? totalRevenue / totalTickets : 0;
 
-	// Mock sparkline data
+	// Mock sparkline data (placeholder hasta tener histórico real por día en API para cada métrica)
 	const sparklineData = [10, 15, 12, 18, 20, 15, 22, 25];
 
 	const quickStats = [
 		{
-			label: "Total Revenue",
+			label: "Ingresos Totales",
 			value: fCurrency(totalRevenue),
-			icon: "solar:dollar-minimalistic-bold-duotone",
+			icon: "solar:wallet-money-bold-duotone",
 			color: "#3b82f6", // Blue
-			chart: salesData?.ventasPorDia?.map((v) => v.totalVenta) || sparklineData,
+			chart: salesData?.ventasPorDia?.map((v) => v.ingresoTotal) || sparklineData,
 			trend: "+12.5%",
 			trendUp: true,
 		},
 		{
-			label: "Tickets Sold",
+			label: "Boletos Vendidos",
 			value: totalTickets.toLocaleString(),
 			icon: "solar:ticket-sale-bold-duotone",
 			color: "#10b981", // Emerald
-			chart: sparklineData,
+			chart: salesData?.ventasPorDia?.map((v) => v.boletosVendidos) || sparklineData,
 			trend: "+5.2%",
 			trendUp: true,
 		},
 		{
-			label: "Cancelled Tickets",
+			label: "Boletos Cancelados",
 			value: cancelledTickets.toLocaleString(),
 			icon: "solar:ticket-broken-bold-duotone",
 			color: "#ef4444", // Red
 			chart: [2, 1, 0, 1, 2, 1, 0, 1],
 			trend: "-2.1%",
-			trendUp: false, // Good thing
+			trendUp: false, // Es bueno que baje
 		},
 		{
-			label: "Avg. Ticket Price",
+			label: "Precio Promedio",
 			value: fCurrency(avgTicketPrice),
 			icon: "solar:tag-price-bold-duotone",
 			color: "#f59e42", // Orange
 			chart: sparklineData,
-			trend: "Stable",
+			trend: "Estable",
 			trendUp: true,
 		},
 	];
 
-	// --- Chart Configuration ---
+	// --- Configuración Gráficos ---
 
 	// Sparklines
 	const sparklineOptions = useChart({
@@ -92,10 +106,16 @@ export default function TicketsPage() {
 		stroke: { width: 2 },
 	});
 
-	// Sales Trend (Area)
+	// Tendencia de Ventas (Area)
 	const salesTrendOptions = useChart({
 		xaxis: {
-			categories: salesData?.ventasPorDia?.map((v) => new Date(v.fecha).toLocaleDateString()) || [],
+			categories:
+				salesData?.ventasPorDia?.map((v) =>
+					new Date(v.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+				) || [],
+			labels: {
+				style: { fontSize: "11px", fontWeight: 600 },
+			},
 		},
 		tooltip: {
 			y: { formatter: (value: number) => fCurrency(value) },
@@ -110,23 +130,24 @@ export default function TicketsPage() {
 				stops: [0, 100],
 			},
 		},
+		dataLabels: { enabled: false },
 	});
 
 	const salesTrendSeries = [
 		{
-			name: "Revenue",
-			data: salesData?.ventasPorDia?.map((v) => v.totalVenta) || [],
+			name: "Ingresos",
+			data: salesData?.ventasPorDia?.map((v) => v.ingresoTotal) || [],
 		},
 	];
 
-	// Ticket Status (Donut)
+	// Estado de Boletos (Donut)
 	const availableTickets = Math.max(
 		0,
 		(salesData?.totalBoletos || 0) - (salesData?.boletosVendidos || 0) - (salesData?.boletosCancelados || 0),
 	);
 
 	const ticketStatusOptions = useChart({
-		labels: ["Sold", "Cancelled", "Available"],
+		labels: ["Vendidos", "Cancelados", "Disponibles"],
 		colors: ["#10b981", "#ef4444", "#e5e7eb"],
 		stroke: { show: false },
 		legend: { position: "bottom" },
@@ -141,6 +162,8 @@ export default function TicketsPage() {
 							show: true,
 							label: "Total",
 							formatter: () => `${salesData?.totalBoletos || 0}`,
+							fontSize: "18px",
+							fontWeight: 700,
 						},
 					},
 				},
@@ -150,10 +173,10 @@ export default function TicketsPage() {
 
 	const ticketStatusSeries = [salesData?.boletosVendidos || 0, salesData?.boletosCancelados || 0, availableTickets];
 
-	// Revenue Breakdown (Donut)
+	// Desglose de Ingresos (Donut)
 	const revenueBreakdownOptions = useChart({
-		labels: ["Base Revenue", "Service Charges"],
-		colors: ["#3b82f6", "#f59e42"],
+		labels: ["Ingreso Base", "Cargos Servicio", "IVA", "Descuentos"],
+		colors: ["#3b82f6", "#f59e42", "#8b5cf6", "#ef4444"],
 		stroke: { show: false },
 		legend: { position: "bottom" },
 		tooltip: {
@@ -168,7 +191,9 @@ export default function TicketsPage() {
 						total: {
 							show: true,
 							label: "Total",
-							formatter: () => fCurrency((salesData?.ingresoBase || 0) + (salesData?.cargosServicio || 0)),
+							formatter: () => fCurrency(salesData?.ingresoTotal || 0),
+							fontSize: "16px",
+							fontWeight: 700,
 						},
 					},
 				},
@@ -176,31 +201,53 @@ export default function TicketsPage() {
 		},
 	});
 
-	const revenueBreakdownSeries = [salesData?.ingresoBase || 0, salesData?.cargosServicio || 0];
+	const revenueBreakdownSeries = [
+		salesData?.ingresoBase || 0,
+		salesData?.cargosServicio || 0,
+		salesData?.iva || 0,
+		salesData?.descuentosAplicados || 0,
+	];
 
-	// Sales by Event (Bar)
+	// Ventas por Evento (Bar)
 	const salesByEventOptions = useChart({
 		xaxis: {
 			categories: salesData?.ventasPorEvento?.map((e) => e.eventoNombre) || [],
+			labels: {
+				style: { fontSize: "11px" },
+			},
 		},
 		plotOptions: {
 			bar: {
 				borderRadius: 4,
-				columnWidth: "45%",
+				columnWidth: "50%",
 				distributed: true,
 				horizontal: true,
+				dataLabels: {
+					position: "bottom",
+				},
 			},
+		},
+		dataLabels: {
+			enabled: true,
+			textAnchor: "start",
+			style: {
+				colors: ["#fff"],
+			},
+			formatter: (val, opt) => `${opt.w.globals.labels[opt.dataPointIndex]}:  ${fCurrency(val as number)}`,
+			offsetX: 0,
+			dropShadow: { enabled: true },
 		},
 		legend: { show: false },
 		tooltip: {
 			y: { formatter: (value: number) => fCurrency(value) },
 		},
+		colors: ["#3b82f6", "#10b981", "#f59e42", "#8b5cf6", "#ef4444"],
 	});
 
 	const salesByEventSeries = [
 		{
-			name: "Revenue",
-			data: salesData?.ventasPorEvento?.map((e) => e.totalVenta) || [],
+			name: "Ingresos",
+			data: salesData?.ventasPorEvento?.map((e) => e.ingresoTotal) || [],
 		},
 	];
 
@@ -217,24 +264,66 @@ export default function TicketsPage() {
 			{/* Banner */}
 			<TicketsBanner />
 
-			{/* Filter Section */}
-			<div className="flex justify-end">
-				<div className="w-full md:w-[250px]">
-					<Select value={selectedEventId} onValueChange={setSelectedEventId}>
-						<SelectTrigger className="bg-background">
-							<SelectValue placeholder="Filter by event" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Events</SelectItem>
-							{events?.map((event) => (
-								<SelectItem key={event.eventoID} value={String(event.eventoID)}>
-									{event.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
+			{/* Filtros */}
+			<Card>
+				<CardContent className="flex flex-wrap gap-4 items-center p-4">
+					<div className="flex items-center gap-2">
+						<Icon icon="solar:filter-bold-duotone" size={20} className="text-primary" />
+						<Text variant="body2" className="font-semibold">
+							Filtros:
+						</Text>
+					</div>
+
+					{/* Rango de Tiempo */}
+					<div className="flex items-center gap-2">
+						<Text variant="caption" className="text-muted-foreground">
+							Periodo:
+						</Text>
+						<Select value={timeRange} onValueChange={setTimeRange}>
+							<SelectTrigger className="w-[160px] h-9">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="7d">Últimos 7 días</SelectItem>
+								<SelectItem value="30d">Últimos 30 días</SelectItem>
+								<SelectItem value="90d">Últimos 90 días</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					{/* Selector de Evento */}
+					<div className="flex items-center gap-2">
+						<Text variant="caption" className="text-muted-foreground">
+							Evento:
+						</Text>
+						<Select value={selectedEventId} onValueChange={setSelectedEventId}>
+							<SelectTrigger className="w-[220px] h-9">
+								<SelectValue placeholder="Todos los eventos" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">Todos los eventos</SelectItem>
+								{events?.map((event) => (
+									<SelectItem key={event.eventoID} value={String(event.eventoID)}>
+										{event.nombre}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							setTimeRange("30d");
+							setSelectedEventId("all");
+						}}
+					>
+						<Icon icon="solar:refresh-linear" size={16} className="mr-1" />
+						Limpiar
+					</Button>
+				</CardContent>
+			</Card>
 
 			{/* Quick Stats Grid */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -303,11 +392,17 @@ export default function TicketsPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:graph-new-bold-duotone" className="text-primary" size={24} />
-							Sales Trend
+							Tendencia de Ventas
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Chart type="area" height={350} options={salesTrendOptions} series={salesTrendSeries} />
+						{salesData?.ventasPorDia && salesData.ventasPorDia.length > 0 ? (
+							<Chart type="area" height={350} options={salesTrendOptions} series={salesTrendSeries} />
+						) : (
+							<div className="h-[350px] flex items-center justify-center text-muted-foreground">
+								No hay datos de ventas para el periodo seleccionado
+							</div>
+						)}
 					</CardContent>
 				</Card>
 
@@ -316,7 +411,7 @@ export default function TicketsPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:pie-chart-2-bold-duotone" className="text-primary" size={24} />
-							Ticket Status
+							Estado de Boletos
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="flex-1 flex items-center justify-center">
@@ -332,7 +427,7 @@ export default function TicketsPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:wallet-money-bold-duotone" className="text-primary" size={24} />
-							Revenue Breakdown
+							Desglose de Ingresos
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
@@ -345,11 +440,17 @@ export default function TicketsPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:ranking-bold-duotone" className="text-primary" size={24} />
-							Revenue by Event
+							Ingresos por Evento
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Chart type="bar" height={300} options={salesByEventOptions} series={salesByEventSeries} />
+						{salesData?.ventasPorEvento && salesData.ventasPorEvento.length > 0 ? (
+							<Chart type="bar" height={300} options={salesByEventOptions} series={salesByEventSeries} />
+						) : (
+							<div className="h-[300px] flex items-center justify-center text-muted-foreground">
+								No hay datos de eventos
+							</div>
+						)}
 					</CardContent>
 				</Card>
 			</div>

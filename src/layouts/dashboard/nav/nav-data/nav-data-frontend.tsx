@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------------
 import { Icon } from "@/components/icon";
 import type { NavProps } from "@/components/nav";
-import { Badge } from "@/ui/badge";
 
 /**
  * Estructura de una sección de la barra lateral:
@@ -47,7 +46,6 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Notificaciones",
 				path: "/notifications",
 				icon: <Icon icon="solar:bell-bing-bold-duotone" size="24" />,
-				info: <Badge variant="destructive">5</Badge>,
 				// Visible para todos los usuarios autenticados
 			},
 		],
@@ -184,10 +182,10 @@ export const frontendNavData: NavProps["data"] = [
 				],
 			},
 			{
-				title: "Calendario General",
-				path: "/calendar-general",
-				icon: <Icon icon="solar:calendar-mark-bold-duotone" size="24" />,
-				auth: ["Admin", "Manager", "Operator"],
+				title: "sys.nav.calendar",
+				path: "/calendar",
+				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
+				auth: ["Admin"],
 			},
 		],
 	},
@@ -319,76 +317,8 @@ export const frontendNavData: NavProps["data"] = [
 	// Acceso: Solo Admin - Para desarrollo y pruebas
 	// =========================================================================
 	{
-		name: "Desarrollo",
+		name: "Cerrar Sesión",
 		items: [
-			{
-				title: "sys.nav.workbench",
-				path: "/workbench",
-				icon: <Icon icon="local:ic-workbench" size="24" />,
-				auth: ["Admin"],
-			},
-			{
-				title: "sys.nav.analysis",
-				path: "/analysis",
-				icon: <Icon icon="local:ic-analysis" size="24" />,
-				auth: ["Admin"],
-			},
-			{
-				title: "sys.nav.components",
-				path: "/components",
-				icon: <Icon icon="solar:widget-5-bold-duotone" size="24" />,
-				caption: "sys.nav.custom_ui_components",
-				auth: ["Admin"],
-				children: [
-					{
-						title: "sys.nav.icon",
-						path: "/components/icon",
-					},
-					{
-						title: "sys.nav.animate",
-						path: "/components/animate",
-					},
-					{
-						title: "sys.nav.scroll",
-						path: "/components/scroll",
-					},
-					{
-						title: "sys.nav.i18n",
-						path: "/components/multi-language",
-					},
-					{
-						title: "sys.nav.upload",
-						path: "/components/upload",
-					},
-					{
-						title: "sys.nav.chart",
-						path: "/components/chart",
-					},
-					{
-						title: "sys.nav.toast",
-						path: "/components/toast",
-					},
-				],
-			},
-			{
-				title: "sys.nav.permission",
-				path: "/permission",
-				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
-				auth: ["Admin"],
-			},
-			{
-				title: "sys.nav.calendar",
-				path: "/calendar",
-				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
-				info: <Badge variant="warning">+12</Badge>,
-				auth: ["Admin"],
-			},
-			{
-				title: "sys.nav.kanban",
-				path: "/kanban",
-				icon: <Icon icon="solar:clipboard-bold-duotone" size="24" />,
-				auth: ["Admin"],
-			},
 			{
 				title: "Cerrar Sesión",
 				path: "/functions/token_expired",

@@ -24,16 +24,16 @@ export default function TicketsBanner() {
 					<div className="col-span-2 md:col-span-1">
 						<div className="flex flex-col gap-4">
 							<Title as="h2" className="text-white text-2xl md:text-3xl font-bold">
-								Tickets Management
+								Gestión de Boletos
 							</Title>
 							<Text className="text-white/90 text-sm md:text-base">
-								Monitor ticket sales, manage cancellations, and track revenue streams in real-time.
+								Monitorea las ventas, gestiona cancelaciones y analiza los flujos de ingresos en tiempo real.
 							</Text>
 
 							<div className="flex gap-3 mt-2">
 								<Button variant="secondary" className="w-fit" onClick={() => window.print()}>
 									<Icon icon="solar:printer-outline" size={20} />
-									<span className="ml-2 font-semibold">Export Report</span>
+									<span className="ml-2 font-semibold">Exportar Reporte</span>
 								</Button>
 							</div>
 						</div>

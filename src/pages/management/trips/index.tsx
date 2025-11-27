@@ -72,15 +72,6 @@ type FormDataType = {
 	estatus?: number;
 };
 
-// Helper para convertir ticks a HH:mm
-const ticksToTime = (ticks: number): string => {
-	if (!Number.isFinite(ticks)) return "00:00";
-	const totalSeconds = Math.floor(ticks / 10000000);
-	const hours = Math.floor(totalSeconds / 3600) % 24;
-	const minutes = Math.floor((totalSeconds % 3600) / 60);
-	return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-};
-
 export default function ViajesPage() {
 	const queryClient = useQueryClient();
 
@@ -294,7 +285,7 @@ export default function ViajesPage() {
 		const evento = eventos.find((e) => e.eventoID === eventoID);
 		if (evento?.fecha) {
 			const fechaEvento = new Date(evento.fecha).toISOString().split("T")[0];
-			const horaEvento = evento.horaInicio?.ticks ? ticksToTime(evento.horaInicio.ticks) : "19:00";
+			const horaEvento = evento.horaInicio ? evento.horaInicio.slice(0, 5) : "19:00";
 
 			setFormData((f) => ({
 				...f,
@@ -691,9 +682,7 @@ export default function ViajesPage() {
 											</span>
 											<span>
 												<strong>Hora:</strong>{" "}
-												{eventoSeleccionado.horaInicio?.ticks
-													? ticksToTime(eventoSeleccionado.horaInicio.ticks)
-													: "No especificada"}
+												{eventoSeleccionado.horaInicio ? eventoSeleccionado.horaInicio.slice(0, 5) : "No especificada"}
 											</span>
 											<span>
 												<strong>Recinto:</strong> {eventoSeleccionado.recinto}

@@ -82,7 +82,7 @@ export interface EventoDto {
 	descripcion: string;
 	tipoEvento: string;
 	fecha: string;
-	horaInicio: HoraInicio;
+	horaInicio: string;
 	recinto: string;
 	direccion: string;
 	ciudad: string;

@@ -73,7 +73,9 @@ export interface IncidenciaListaDto {
 	estatus: number;
 	estatusNombre: string;
 	reportadorNombre: string;
+	asignadoA: string;
 	asignadoNombre: string;
+	asignadoEmail: string;
 	viajeID: number;
 	viajeCodigoViaje: string;
 	unidadPlacas: string;

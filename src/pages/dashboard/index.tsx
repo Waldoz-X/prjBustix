@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bus, Calendar, Loader2, TrendingUp, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 import reportesService from "@/api/services/reportesService";
 import unidadService from "@/api/services/unidadService";
 import { Chart, useChart } from "@/components/chart";
@@ -7,6 +8,7 @@ import Icon from "@/components/icon/icon";
 import { Badge } from "@/ui/badge";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Text, Title } from "@/ui/typography";
 import { fCurrency } from "@/utils/format-number";
@@ -20,10 +22,27 @@ export default function DashboardPage() {
 		queryFn: reportesService.getDashboard,
 	});
 
+	// Time Range State
+	const [timeRange, setTimeRange] = useState("30d");
+
 	// Fetch Sales Report (for charts)
+	const { startDate, endDate } = useMemo(() => {
+		const end = new Date();
+		const start = new Date();
+
+		const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+		start.setDate(end.getDate() - days);
+
+		return { startDate: start, endDate: end };
+	}, [timeRange]);
+
 	const { data: salesData, isLoading: isLoadingSales } = useQuery({
-		queryKey: ["dashboard-sales"],
-		queryFn: () => reportesService.getReporteVentas(),
+		queryKey: ["dashboard-sales", startDate.toISOString(), endDate.toISOString()],
+		queryFn: () =>
+			reportesService.getReporteVentas({
+				fechaDesde: startDate.toISOString(),
+				fechaHasta: endDate.toISOString(),
+			}),
 	});
 
 	// Fetch Occupancy Report (for charts)
@@ -42,27 +61,96 @@ export default function DashboardPage() {
 
 	// --- Chart Configuration ---
 
-	// Sales Chart (Area)
+	// Sales Chart (Bar)
+	const salesSeries = useMemo(
+		() => [
+			{
+				name: "Ventas Totales",
+				data: salesData?.ventasPorDia?.map((v) => v.ingresoTotal) || [],
+			},
+		],
+		[salesData],
+	);
+
 	const salesChartOptions = useChart({
+		colors: ["#3b82f6"],
+		chart: {
+			toolbar: { show: false },
+		},
 		xaxis: {
-			categories: salesData?.ventasPorDia?.map((v) => new Date(v.fecha).toLocaleDateString()) || [],
+			categories:
+				salesData?.ventasPorDia?.map((v) =>
+					new Date(v.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+				) || [],
+			labels: {
+				style: {
+					fontSize: "12px",
+					fontWeight: 600,
+				},
+			},
+		},
+		stroke: {
+			show: true,
+			width: 2,
+			colors: ["transparent"],
+		},
+		plotOptions: {
+			bar: {
+				borderRadius: 8,
+				columnWidth: "48%",
+				dataLabels: {
+					position: "top",
+				},
+			},
+		},
+		dataLabels: {
+			enabled: true,
+			formatter: (value: number) => fCurrency(value),
+			offsetY: -20,
+			style: {
+				fontSize: "11px",
+				fontWeight: "bold",
+				colors: ["#3b82f6"],
+			},
+		},
+		fill: {
+			type: "gradient",
+			gradient: {
+				shade: "light",
+				type: "vertical",
+				shadeIntensity: 0.5,
+				gradientToColors: ["#60a5fa"],
+				inverseColors: false,
+				opacityFrom: 0.95,
+				opacityTo: 0.85,
+				stops: [0, 100],
+			},
 		},
 		tooltip: {
 			y: {
 				formatter: (value: number) => fCurrency(value),
 			},
 		},
+		yaxis: {
+			labels: {
+				formatter: (value: number) => fCurrency(value),
+			},
+		},
 	});
 
-	const salesSeries = [
-		{
-			name: "Ventas Totales",
-			data: salesData?.ventasPorDia?.map((v) => v.totalVenta) || [],
-		},
-	];
-
 	// Occupancy Chart (Bar)
+	const occupancySeries = useMemo(
+		() => [
+			{
+				name: "Ocupación",
+				data: occupancyData?.ocupacionPorEvento?.map((e) => e.porcentajeOcupacion) || [],
+			},
+		],
+		[occupancyData],
+	);
+
 	const occupancyChartOptions = useChart({
+		colors: ["#10b981"],
 		xaxis: {
 			categories: occupancyData?.ocupacionPorEvento?.map((e) => e.eventoNombre) || [],
 		},
@@ -79,13 +167,6 @@ export default function DashboardPage() {
 			},
 		},
 	});
-
-	const occupancySeries = [
-		{
-			name: "Ocupación",
-			data: occupancyData?.ocupacionPorEvento?.map((e) => e.porcentajeOcupacion) || [],
-		},
-	];
 
 	// --- Unit Analytics Configuration ---
 
@@ -190,7 +271,7 @@ export default function DashboardPage() {
 			value: fCurrency(metrics?.ingresosMes || 0),
 			subtext: `${metrics?.boletosMes} boletos`,
 			color: "#3b82f6",
-			chart: salesData?.ventasPorDia?.map((v) => v.totalVenta) || [],
+			chart: salesData?.ventasPorDia?.map((v) => v.ingresoTotal) || [],
 		},
 		{
 			icon: "solar:bus-outline",
@@ -263,15 +344,25 @@ export default function DashboardPage() {
 				{/* Left Column: Sales & Occupancy Charts */}
 				<div className="lg:col-span-2 space-y-4">
 					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<TrendingUp className="h-5 w-5" />
-								Tendencia de Ventas (Últimos 30 días)
+						<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardTitle className="flex items-center gap-2 text-base font-medium">
+								<TrendingUp className="h-5 w-5 text-muted-foreground" />
+								Tendencia de Ventas
 							</CardTitle>
+							<Select value={timeRange} onValueChange={setTimeRange}>
+								<SelectTrigger className="w-[140px] h-8">
+									<SelectValue placeholder="Periodo" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="7d">Últimos 7 días</SelectItem>
+									<SelectItem value="30d">Últimos 30 días</SelectItem>
+									<SelectItem value="90d">Últimos 90 días</SelectItem>
+								</SelectContent>
+							</Select>
 						</CardHeader>
 						<CardContent>
 							{salesData?.ventasPorDia && salesData.ventasPorDia.length > 0 ? (
-								<Chart type="area" height={300} options={salesChartOptions} series={salesSeries} />
+								<Chart type="bar" height={300} options={salesChartOptions} series={salesSeries} />
 							) : (
 								<div className="h-[300px] flex items-center justify-center text-muted-foreground">
 									No hay datos de ventas recientes
@@ -321,9 +412,9 @@ export default function DashboardPage() {
 												</td>
 												<td className="py-2">
 													<div className="font-semibold truncate max-w-[120px]">{evento.eventoNombre}</div>
-													<div className="text-xs text-muted-foreground">{evento.cantidadBoletos} boletos</div>
+													<div className="text-xs text-muted-foreground">{evento.totalBoletos} boletos</div>
 												</td>
-												<td className="py-2 text-right font-bold">{fCurrency(evento.totalVenta)}</td>
+												<td className="py-2 text-right font-bold">{fCurrency(evento.ingresoTotal)}</td>
 											</tr>
 										))
 									) : (
@@ -403,7 +494,9 @@ export default function DashboardPage() {
 											</TableCell>
 											<TableCell>{new Date(viaje.fechaSalida).toLocaleString()}</TableCell>
 											<TableCell className="text-right">
-												<Badge variant={viaje.ocupacion > 80 ? "destructive" : "secondary"}>{viaje.ocupacion}%</Badge>
+												<Badge variant={viaje.porcentajeOcupacion > 80 ? "destructive" : "secondary"}>
+													{viaje.asientosVendidos}/{viaje.cupoTotal}
+												</Badge>
 											</TableCell>
 										</TableRow>
 									))

@@ -60,15 +60,17 @@ export interface ReporteOcupacionParams {
 
 export interface VentaPorDiaDto {
 	fecha: string;
-	cantidadBoletos: number;
-	totalVenta: number;
+	totalBoletos: number;
+	boletosVendidos: number;
+	ingresoTotal: number;
 }
 
 export interface VentaPorEventoDto {
 	eventoId: number;
 	eventoNombre: string;
-	cantidadBoletos: number;
-	totalVenta: number;
+	totalBoletos: number;
+	boletosVendidos: number;
+	ingresoTotal: number;
 }
 
 export interface ReporteVentasDto {
@@ -83,6 +85,7 @@ export interface ReporteVentasDto {
 	ingresoBase: number;
 	descuentosAplicados: number;
 	cargosServicio: number;
+	iva: number;
 	ventasPorEvento: VentaPorEventoDto[];
 	ventasPorDia: VentaPorDiaDto[];
 }
@@ -151,13 +154,107 @@ export interface ProximoViajeDto {
 	fechaSalida: string;
 	asientosVendidos: number;
 	cupoTotal: number;
-	ocupacion: number;
+	asientosDisponibles: number;
+	porcentajeOcupacion: number;
 }
 
 export interface DashboardDto {
 	metricas: DashboardMetricasDto;
 	ultimosEventos: UltimoEventoDto[];
 	proximosViajes: ProximoViajeDto[];
+}
+
+export interface ReporteRutasDto {
+	success: boolean;
+	desde: string;
+	hasta: string;
+	totalRutas: number;
+	rutas: {
+		rutaId: number;
+		nombreRuta: string;
+		ciudadOrigen: string;
+		ciudadDestino: string;
+		totalViajes: number;
+		totalAsientos: number;
+		asientosVendidos: number;
+		ocupacionPromedio: number;
+		ingresoTotal: number;
+		totalBoletos: number;
+		ingresoPromedioPorViaje: number;
+	}[];
+}
+
+export interface ReporteUnidadesDto {
+	success: boolean;
+	desde: string;
+	hasta: string;
+	totalUnidades: number;
+	unidades: {
+		unidadId: number;
+		placas: string;
+		modelo: string;
+		capacidad: number;
+		totalViajes: number;
+		ocupacionPromedio: number;
+		ingresoTotal: number;
+		ingresoPorViaje: number;
+		totalIncidencias: number;
+		incidenciasCriticas: number;
+		eficiencia: {
+			viajesPorDia: number;
+			ingresoPorDia: number;
+		};
+	}[];
+}
+
+export interface ReporteCuponesDto {
+	success: boolean;
+	desde: string;
+	hasta: string;
+	message?: string;
+	resumen: {
+		totalCuponesActivos: number;
+		totalUsos: number;
+		descuentoTotalOtorgado: number;
+		ingresosTotalesGenerados: number;
+		roi: number;
+		promedioDescuentoPorUso: number;
+	};
+	cupones: any[];
+}
+
+export interface ReportePuntualidadDto {
+	success: boolean;
+	desde: string;
+	hasta: string;
+	resumen: {
+		totalViajes: number;
+		viajesCompletados: number;
+		viajesEnProceso: number;
+		viajesProgramados: number;
+		porcentajeCompletados: number;
+	};
+	desempeñoChoferes: any[];
+}
+
+export interface ReporteComparacionDto {
+	success: boolean;
+	periodo1: { desde: string; hasta: string };
+	periodo2: { desde: string; hasta: string };
+	comparacion: {
+		ingresos: ComparacionMetrica;
+		boletos: ComparacionMetrica;
+		viajes: ComparacionMetrica;
+		ticketPromedio: { periodo1: number; periodo2: number };
+	};
+}
+
+interface ComparacionMetrica {
+	periodo1: number;
+	periodo2: number;
+	diferencia: number;
+	crecimientoPorcentaje: number;
+	tendencia: string;
 }
 
 // ==================== FUNCIONES ====================
@@ -223,10 +320,77 @@ const getDashboard = async (): Promise<DashboardDto> => {
 	return await handleResponse(response);
 };
 
+const getReporteRutas = async (params?: { fechaDesde?: string; fechaHasta?: string }): Promise<ReporteRutasDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	const response = await fetch(`${BASE_URL}/rutas?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReporteUnidades = async (params?: {
+	fechaDesde?: string;
+	fechaHasta?: string;
+}): Promise<ReporteUnidadesDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	const response = await fetch(`${BASE_URL}/unidades?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReporteCupones = async (params?: { fechaDesde?: string; fechaHasta?: string }): Promise<ReporteCuponesDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	const response = await fetch(`${BASE_URL}/cupones?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReporteIncidenciasDetalle = async (params?: { fechaDesde?: string; fechaHasta?: string }): Promise<any> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	const response = await fetch(`${BASE_URL}/incidencias-detalle?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReportePuntualidad = async (params?: {
+	fechaDesde?: string;
+	fechaHasta?: string;
+}): Promise<ReportePuntualidadDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	const response = await fetch(`${BASE_URL}/puntualidad?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReporteComparacion = async (params: {
+	periodo1Desde?: string;
+	periodo1Hasta?: string;
+	periodo2Desde?: string;
+	periodo2Hasta?: string;
+}): Promise<ReporteComparacionDto> => {
+	const queryParams = new URLSearchParams();
+	if (params.periodo1Desde) queryParams.append("periodo1Desde", params.periodo1Desde);
+	if (params.periodo1Hasta) queryParams.append("periodo1Hasta", params.periodo1Hasta);
+	if (params.periodo2Desde) queryParams.append("periodo2Desde", params.periodo2Desde);
+	if (params.periodo2Hasta) queryParams.append("periodo2Hasta", params.periodo2Hasta);
+	const response = await fetch(`${BASE_URL}/comparacion?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
 const reportesService = {
 	getReporteVentas,
 	getReporteOcupacion,
 	getDashboard,
+	getReporteRutas,
+	getReporteUnidades,
+	getReporteCupones,
+	getReporteIncidenciasDetalle,
+	getReporteComparacion,
+	getReportePuntualidad,
 };
 
 export default reportesService;

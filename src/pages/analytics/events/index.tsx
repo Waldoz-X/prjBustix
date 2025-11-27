@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import eventosService from "@/api/services/eventosService";
 import reportesService from "@/api/services/reportesService";
 import { Chart, useChart } from "@/components/chart";
 import Icon from "@/components/icon/icon";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Text, Title } from "@/ui/typography";
 import { fCurrency, fPercent } from "@/utils/format-number";
@@ -13,20 +16,51 @@ import { rgbAlpha } from "@/utils/theme";
 import AnalyticsBanner from "./components/analytics-banner";
 
 export default function EventAnalysisPage() {
-	// 1. Fetch Data
+	// Filtros
+	const [timeRange, setTimeRange] = useState("30d");
+	const [selectedEvent, setSelectedEvent] = useState<string>("all");
+
+	// Calcular fechas según el rango de tiempo
+	const { startDate, endDate } = useMemo(() => {
+		const end = new Date();
+		const start = new Date();
+
+		const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+		start.setDate(end.getDate() - days);
+
+		return { startDate: start, endDate: end };
+	}, [timeRange]);
+
+	// Fetch de eventos para el selector
+	const { data: eventsListData } = useQuery({
+		queryKey: ["events-list"],
+		queryFn: () => eventosService.getAllEventos(),
+	});
+
+	// 1. Fetch Data con filtros
 	const { data: dashboardData, isLoading: isLoadingDashboard } = useQuery({
 		queryKey: ["analytics-dashboard"],
 		queryFn: reportesService.getDashboard,
 	});
 
 	const { data: salesData, isLoading: isLoadingSales } = useQuery({
-		queryKey: ["analytics-sales"],
-		queryFn: () => reportesService.getReporteVentas(),
+		queryKey: ["analytics-sales", startDate.toISOString(), endDate.toISOString(), selectedEvent],
+		queryFn: () =>
+			reportesService.getReporteVentas({
+				fechaDesde: startDate.toISOString(),
+				fechaHasta: endDate.toISOString(),
+				eventoId: selectedEvent !== "all" ? parseInt(selectedEvent) : undefined,
+			}),
 	});
 
 	const { data: occupancyData, isLoading: isLoadingOccupancy } = useQuery({
-		queryKey: ["analytics-occupancy"],
-		queryFn: () => reportesService.getReporteOcupacion(),
+		queryKey: ["analytics-occupancy", startDate.toISOString(), endDate.toISOString(), selectedEvent],
+		queryFn: () =>
+			reportesService.getReporteOcupacion({
+				fechaDesde: startDate.toISOString(),
+				fechaHasta: endDate.toISOString(),
+				eventoId: selectedEvent !== "all" ? parseInt(selectedEvent) : undefined,
+			}),
 	});
 
 	const isLoading = isLoadingDashboard || isLoadingSales || isLoadingOccupancy;
@@ -38,45 +72,38 @@ export default function EventAnalysisPage() {
 	const activeEvents = metrics?.eventosActivos || 0;
 	const avgOccupancy = occupancyData?.promedioOcupacion || 0;
 
-	// Mock sparkline data (since API doesn't provide history for all metrics yet)
-	const sparklineData = [10, 15, 12, 18, 20, 15, 22, 25];
-
 	const quickStats = [
 		{
-			label: "Total Revenue",
+			label: "Ingresos Totales",
 			value: fCurrency(totalRevenue),
 			icon: "solar:dollar-minimalistic-bold-duotone",
-			color: "#3b82f6", // Blue
-			chart: salesData?.ventasPorDia?.map((v) => v.totalVenta) || sparklineData,
-			trend: "+12.5%",
-			trendUp: true,
+			color: "#3b82f6",
+			chart: salesData?.ventasPorDia?.map((v) => v.ingresoTotal) || [0, 0],
+			subtext: `${totalTickets} boletos`,
 		},
 		{
-			label: "Tickets Sold",
+			label: "Boletos Vendidos",
 			value: totalTickets.toLocaleString(),
 			icon: "solar:ticket-sale-bold-duotone",
-			color: "#10b981", // Emerald
-			chart: sparklineData, // Placeholder
-			trend: "+5.2%",
-			trendUp: true,
+			color: "#10b981",
+			chart: salesData?.ventasPorDia?.map((v) => v.boletosVendidos) || [0, 0],
+			subtext: `de ${salesData?.totalBoletos || 0} total`,
 		},
 		{
-			label: "Active Events",
+			label: "Eventos Activos",
 			value: activeEvents.toString(),
 			icon: "solar:calendar-mark-bold-duotone",
-			color: "#f59e42", // Orange
-			chart: [2, 2, 3, 2, 4, 3, 2, 2], // Placeholder
-			trend: "Stable",
-			trendUp: true,
+			color: "#f59e42",
+			chart: [2, 2, 3, 2, 4, 3, 2, 2],
+			subtext: dashboardData?.ultimosEventos?.length ? `${dashboardData.ultimosEventos.length} próximos` : "0 próximos",
 		},
 		{
-			label: "Avg. Occupancy",
+			label: "Ocupación Promedio",
 			value: fPercent(avgOccupancy / 100),
 			icon: "solar:users-group-two-rounded-bold-duotone",
-			color: "#6366f1", // Indigo
-			chart: occupancyData?.ocupacionPorEvento?.map((e) => e.porcentajeOcupacion) || sparklineData,
-			trend: avgOccupancy > 80 ? "High" : "Normal",
-			trendUp: avgOccupancy > 50,
+			color: "#6366f1",
+			chart: occupancyData?.ocupacionPorEvento?.map((e) => e.porcentajeOcupacion) || [0, 0],
+			subtext: avgOccupancy > 70 ? "Alta" : avgOccupancy > 40 ? "Media" : "Baja",
 		},
 	];
 
@@ -91,61 +118,120 @@ export default function EventAnalysisPage() {
 		stroke: { width: 2 },
 	});
 
-	// Sales Trend (Area)
+	// Sales Trend (Bar con gradiente)
 	const salesTrendOptions = useChart({
+		chart: {
+			toolbar: { show: false },
+		},
 		xaxis: {
-			categories: salesData?.ventasPorDia?.map((v) => new Date(v.fecha).toLocaleDateString()) || [],
+			categories:
+				salesData?.ventasPorDia?.map((v) =>
+					new Date(v.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+				) || [],
+			labels: {
+				style: {
+					fontSize: "11px",
+					fontWeight: 600,
+				},
+			},
+		},
+		stroke: {
+			show: true,
+			width: 2,
+			colors: ["transparent"],
+		},
+		plotOptions: {
+			bar: {
+				borderRadius: 8,
+				columnWidth: "50%",
+				dataLabels: {
+					position: "top",
+				},
+			},
+		},
+		dataLabels: {
+			enabled: true,
+			formatter: (value: number) => (value > 0 ? fCurrency(value) : ""),
+			offsetY: -20,
+			style: {
+				fontSize: "10px",
+				fontWeight: "bold",
+				colors: ["#3b82f6"],
+			},
+		},
+		fill: {
+			type: "gradient",
+			gradient: {
+				shade: "light",
+				type: "vertical",
+				shadeIntensity: 0.5,
+				gradientToColors: ["#60a5fa"],
+				inverseColors: false,
+				opacityFrom: 0.95,
+				opacityTo: 0.85,
+				stops: [0, 100],
+			},
 		},
 		tooltip: {
 			y: { formatter: (value: number) => fCurrency(value) },
 		},
-		colors: ["#3b82f6"],
-		fill: {
-			type: "gradient",
-			gradient: {
-				shadeIntensity: 1,
-				opacityFrom: 0.4,
-				opacityTo: 0.05,
-				stops: [0, 100],
+		yaxis: {
+			labels: {
+				formatter: (value: number) => fCurrency(value),
 			},
 		},
+		colors: ["#3b82f6"],
 	});
 
 	const salesTrendSeries = [
 		{
-			name: "Revenue",
-			data: salesData?.ventasPorDia?.map((v) => v.totalVenta) || [],
+			name: "Ingresos",
+			data: salesData?.ventasPorDia?.map((v) => v.ingresoTotal) || [],
 		},
 	];
 
-	// Occupancy by Event (Bar)
+	// Occupancy by Event (Bar horizontal)
 	const occupancyOptions = useChart({
 		xaxis: {
 			categories: occupancyData?.ocupacionPorEvento?.map((e) => e.eventoNombre) || [],
 		},
 		plotOptions: {
 			bar: {
-				borderRadius: 4,
-				columnWidth: "45%",
-				distributed: true,
+				horizontal: true,
+				barHeight: "60%",
+				borderRadius: 6,
+				dataLabels: {
+					position: "top",
+				},
+			},
+		},
+		dataLabels: {
+			enabled: true,
+			formatter: (value: number) => `${value}%`,
+			offsetX: 30,
+			style: {
+				fontSize: "11px",
+				fontWeight: "bold",
+				colors: ["#10b981"],
 			},
 		},
 		legend: { show: false },
 		tooltip: {
 			y: { formatter: (value: number) => `${value}%` },
 		},
+		colors: ["#10b981"],
 	});
 
 	const occupancySeries = [
 		{
-			name: "Occupancy",
+			name: "Ocupación",
 			data: occupancyData?.ocupacionPorEvento?.map((e) => e.porcentajeOcupacion) || [],
 		},
 	];
 
 	// Ticket Status (Donut)
 	const ticketStatusOptions = useChart({
-		labels: ["Sold", "Cancelled", "Available"],
+		labels: ["Vendidos", "Cancelados", "Disponibles"],
 		colors: ["#10b981", "#ef4444", "#e5e7eb"],
 		stroke: { show: false },
 		legend: { position: "bottom" },
@@ -153,13 +239,16 @@ export default function EventAnalysisPage() {
 		plotOptions: {
 			pie: {
 				donut: {
-					size: "75%",
+					size: "70%",
 					labels: {
 						show: true,
 						total: {
 							show: true,
-							label: "Total",
+							label: "Total Boletos",
+							color: "hsl(var(--foreground))",
 							formatter: () => `${salesData?.totalBoletos || 0}`,
+							fontSize: "18px",
+							fontWeight: 700,
 						},
 					},
 				},
@@ -189,6 +278,67 @@ export default function EventAnalysisPage() {
 			{/* Banner */}
 			<AnalyticsBanner />
 
+			{/* Filtros */}
+			<Card>
+				<CardContent className="flex flex-wrap gap-4 items-center p-4">
+					<div className="flex items-center gap-2">
+						<Icon icon="solar:filter-bold-duotone" size={20} className="text-primary" />
+						<Text variant="body2" className="font-semibold">
+							Filtros:
+						</Text>
+					</div>
+
+					{/* Rango de Tiempo */}
+					<div className="flex items-center gap-2">
+						<Text variant="caption" className="text-muted-foreground">
+							Periodo:
+						</Text>
+						<Select value={timeRange} onValueChange={setTimeRange}>
+							<SelectTrigger className="w-[160px] h-9">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="7d">Últimos 7 días</SelectItem>
+								<SelectItem value="30d">Últimos 30 días</SelectItem>
+								<SelectItem value="90d">Últimos 90 días</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					{/* Selector de Evento */}
+					<div className="flex items-center gap-2">
+						<Text variant="caption" className="text-muted-foreground">
+							Evento:
+						</Text>
+						<Select value={selectedEvent} onValueChange={setSelectedEvent}>
+							<SelectTrigger className="w-[220px] h-9">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">Todos los eventos</SelectItem>
+								{eventsListData?.map((event) => (
+									<SelectItem key={event.eventoID} value={event.eventoID.toString()}>
+										{event.nombre}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							setTimeRange("30d");
+							setSelectedEvent("all");
+						}}
+					>
+						<Icon icon="solar:refresh-linear" size={16} className="mr-1" />
+						Limpiar Filtros
+					</Button>
+				</CardContent>
+			</Card>
+
 			{/* Quick Stats Grid */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				{quickStats.map((stat) => (
@@ -206,23 +356,15 @@ export default function EventAnalysisPage() {
 										{stat.label}
 									</Text>
 								</div>
-								{/* Trend Indicator */}
-								<Badge
-									variant="outline"
-									className={`${
-										stat.trendUp
-											? "text-emerald-500 border-emerald-200 bg-emerald-50"
-											: "text-red-500 border-red-200 bg-red-50"
-									}`}
-								>
-									{stat.trend}
-								</Badge>
 							</div>
 
 							<div className="mt-4">
 								<Title as="h3" className="text-2xl font-bold">
 									{stat.value}
 								</Title>
+								<Text variant="caption" className="text-muted-foreground">
+									{stat.subtext}
+								</Text>
 							</div>
 
 							<div className="w-full h-12 mt-2">
@@ -257,11 +399,17 @@ export default function EventAnalysisPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:graph-new-bold-duotone" className="text-primary" size={24} />
-							Revenue Trend
+							Tendencia de Ingresos
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Chart type="area" height={350} options={salesTrendOptions} series={salesTrendSeries} />
+						{salesData?.ventasPorDia && salesData.ventasPorDia.length > 0 ? (
+							<Chart type="bar" height={350} options={salesTrendOptions} series={salesTrendSeries} />
+						) : (
+							<div className="h-[350px] flex items-center justify-center text-muted-foreground">
+								No hay datos para el periodo seleccionado
+							</div>
+						)}
 					</CardContent>
 				</Card>
 
@@ -270,7 +418,7 @@ export default function EventAnalysisPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:pie-chart-2-bold-duotone" className="text-primary" size={24} />
-							Ticket Distribution
+							Distribución de Boletos
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="flex-1 flex items-center justify-center">
@@ -286,11 +434,17 @@ export default function EventAnalysisPage() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:users-group-rounded-bold-duotone" className="text-primary" size={24} />
-							Occupancy by Event
+							Ocupación por Evento
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Chart type="bar" height={300} options={occupancyOptions} series={occupancySeries} />
+						{occupancyData?.ocupacionPorEvento && occupancyData.ocupacionPorEvento.length > 0 ? (
+							<Chart type="bar" height={300} options={occupancyOptions} series={occupancySeries} />
+						) : (
+							<div className="h-[300px] flex items-center justify-center text-muted-foreground">
+								No hay datos de ocupación
+							</div>
+						)}
 					</CardContent>
 				</Card>
 
@@ -299,20 +453,17 @@ export default function EventAnalysisPage() {
 					<CardHeader className="flex flex-row items-center justify-between">
 						<CardTitle className="flex items-center gap-2">
 							<Icon icon="solar:cup-star-bold-duotone" className="text-primary" size={24} />
-							Top Performing Events
+							Eventos con Mejor Desempeño
 						</CardTitle>
-						<Button variant="outline" size="sm">
-							View All
-						</Button>
 					</CardHeader>
 					<CardContent className="flex-1 overflow-auto">
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Event</TableHead>
-									<TableHead className="text-right">Tickets</TableHead>
-									<TableHead className="text-right">Revenue</TableHead>
-									<TableHead className="text-right">Status</TableHead>
+									<TableHead>Evento</TableHead>
+									<TableHead className="text-right">Boletos</TableHead>
+									<TableHead className="text-right">Ingresos</TableHead>
+									<TableHead className="text-right">Estado</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -329,13 +480,13 @@ export default function EventAnalysisPage() {
 												</div>
 											</div>
 										</TableCell>
-										<TableCell className="text-right font-medium">{event.cantidadBoletos}</TableCell>
+										<TableCell className="text-right font-medium">{event.totalBoletos}</TableCell>
 										<TableCell className="text-right font-bold text-emerald-600">
-											{fCurrency(event.totalVenta)}
+											{fCurrency(event.ingresoTotal)}
 										</TableCell>
 										<TableCell className="text-right">
 											<Badge variant="secondary" className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100">
-												Active
+												Activo
 											</Badge>
 										</TableCell>
 									</TableRow>
@@ -343,7 +494,7 @@ export default function EventAnalysisPage() {
 								{(!salesData?.ventasPorEvento || salesData.ventasPorEvento.length === 0) && (
 									<TableRow>
 										<TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-											No event data available
+											No hay datos de eventos disponibles
 										</TableCell>
 									</TableRow>
 								)}
