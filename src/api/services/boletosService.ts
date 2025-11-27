@@ -143,6 +143,38 @@ export interface CalcularPrecioParams {
 // ==================== FUNCIONES ====================
 
 /**
+ * POST /api/Boletos/iniciar-compra
+ * Iniciar proceso de compra de boletos
+ */
+const iniciarCompra = async (payload: any): Promise<any> => {
+	console.log("[BoletosService] Iniciando compra con payload:", payload);
+
+	if (!payload || typeof payload !== "object") {
+		throw { status: 400, message: "Payload inválido", details: { payload } };
+	}
+
+	if (!payload.viajeID || payload.viajeID <= 0) {
+		throw { status: 400, message: "El ID del viaje es requerido.", details: { field: "viajeID" } };
+	}
+
+	if (!payload.paradaAbordajeID || payload.paradaAbordajeID <= 0) {
+		throw { status: 400, message: "El ID de la parada es requerido.", details: { field: "paradaAbordajeID" } };
+	}
+
+	if (!Array.isArray(payload.pasajeros) || payload.pasajeros.length === 0) {
+		throw { status: 400, message: "Debe proporcionar al menos un pasajero.", details: { field: "pasajeros" } };
+	}
+
+	const response = await fetch(`${BASE_URL}/iniciar-compra`, {
+		method: "POST",
+		headers: getHeaders(),
+		body: JSON.stringify(payload),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
  * GET /api/Boletos/calcular-precio
  * Calcular precio de un boleto con descuentos y cargos
  */
@@ -425,6 +457,7 @@ const marcarNoShow = async (id: number, payload: { paradaViajeID: number; motivo
 };
 
 const boletosService = {
+	iniciarCompra,
 	calcularPrecio,
 	getBoletoById,
 	getMisBoletos,
