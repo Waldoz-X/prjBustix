@@ -52,7 +52,29 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 2: EVENTOS MASIVOS
+	// SECCIÓN 2: EVENTOS PARA USUARIOS
+	// Acceso: User (clientes)
+	// =========================================================================
+	{
+		name: "Eventos",
+		items: [
+			{
+				title: "Eventos Disponibles",
+				path: "/events",
+				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
+				auth: ["User"],
+			},
+			{
+				title: "Mis Boletos",
+				path: "/profile/tickets",
+				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
+				auth: ["User"],
+			},
+		],
+	},
+
+	// =========================================================================
+	// SECCIÓN 3: EVENTOS MASIVOS
 	// Acceso: Admin, Manager, Operator (limitado)
 	// =========================================================================
 	{
@@ -86,7 +108,7 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 3: VIAJES Y OPERACIONES
+	// SECCIÓN 4: VIAJES Y OPERACIONES
 	// Acceso: Admin, Manager, Operator, Staff (según asignación)
 	// =========================================================================
 	{
@@ -126,7 +148,7 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 4: RECURSOS OPERATIVOS
+	// SECCIÓN 5: RECURSOS OPERATIVOS
 	// Acceso: Admin, Manager, Operator (limitado)
 	// =========================================================================
 	{
@@ -191,7 +213,7 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 5: FINANZAS
+	// SECCIÓN 6: FINANZAS
 	// Acceso: Admin, Manager
 	// =========================================================================
 	{
@@ -225,7 +247,7 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 6: PRECIOS Y TARIFAS
+	// SECCIÓN 7: PRECIOS Y TARIFAS
 	// Acceso: Admin, Manager
 	// =========================================================================
 	{
@@ -241,7 +263,7 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 7: CONFIGURACIÓN Y ADMINISTRACIÓN
+	// SECCIÓN 8: CONFIGURACIÓN Y ADMINISTRACIÓN
 	// Acceso: Admin (principalmente)
 	// =========================================================================
 	{
@@ -285,7 +307,7 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 8: MI PERFIL
+	// SECCIÓN 9: MI PERFIL
 	// Acceso: Todos los usuarios autenticados
 	// =========================================================================
 	{
@@ -313,8 +335,8 @@ export const frontendNavData: NavProps["data"] = [
 	},
 
 	// =========================================================================
-	// SECCIÓN 9: DESARROLLO Y TESTING
-	// Acceso: Solo Admin - Para desarrollo y pruebas
+	// SECCIÓN 10: CERRAR SESIÓN
+	// Acceso: Todos los usuarios autenticados
 	// =========================================================================
 	{
 		name: "Cerrar Sesión",
