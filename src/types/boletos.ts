@@ -64,4 +64,5 @@ export interface BoletoResponseDto {
 	fechaValidacion?: string | null;
 	paradaAbordaje?: string;
 	horaEstimadaAbordaje?: string | null;
+	eventoNombre?: string;
 }

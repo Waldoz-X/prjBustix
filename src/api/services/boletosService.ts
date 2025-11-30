@@ -226,7 +226,21 @@ const getMisBoletos = async (): Promise<BoletoDto[]> => {
 	});
 
 	const data = await handleResponse(response);
-	return Array.isArray(data) ? data : [];
+
+	// El endpoint devuelve { success, data, total }
+	if (data && typeof data === "object" && "data" in data && Array.isArray(data.data)) {
+		console.log(`[BoletosService] ✅ ${data.data.length} boletos encontrados de ${data.total} total`);
+		return data.data;
+	}
+
+	// Fallback: si viene directamente como array
+	if (Array.isArray(data)) {
+		console.log(`[BoletosService] ✅ ${data.length} boletos encontrados (array directo)`);
+		return data;
+	}
+
+	console.warn("[BoletosService] ⚠️ Respuesta inesperada:", data);
+	return [];
 };
 
 /**

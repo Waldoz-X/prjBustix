@@ -62,13 +62,11 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Eventos Disponibles",
 				path: "/events",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
-				auth: ["User"],
 			},
 			{
 				title: "Mis Boletos",
 				path: "/profile/tickets",
 				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
-				auth: ["User"],
 			},
 		],
 	},
@@ -82,7 +80,7 @@ export const frontendNavData: NavProps["data"] = [
 		items: [
 			{
 				title: "Gestión de Eventos",
-				path: "/events",
+				path: "/management/events",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
 				auth: ["Admin", "Manager"],
 			},
@@ -317,12 +315,6 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Mi Perfil",
 				path: "/profile",
 				icon: <Icon icon="solar:user-bold-duotone" size="24" />,
-				// Visible para todos los usuarios autenticados
-			},
-			{
-				title: "Mis Boletos",
-				path: "/profile/tickets",
-				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
 				// Visible para todos los usuarios autenticados
 			},
 			{

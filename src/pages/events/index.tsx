@@ -8,8 +8,11 @@ import viajesService, {
 	type ViajeDetalleClienteDto,
 	type ViajeSimpleDto,
 } from "@/api/services/viajesService";
+import { LoadingScreen } from "@/components/loading-screen/LoadingScreen";
+import { PurchaseTicket } from "@/components/purchase-ticket/PurchaseTicket";
 import type { IniciarCompraDto, IniciarCompraResponseDto } from "@/types/boletos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { apiGetExactAddress } from "../../api/services/geoapify.service";
 
 export default function EventsMainPage() {
 	const [events, setEvents] = useState<EventoDto[]>([]);
@@ -22,7 +25,6 @@ export default function EventsMainPage() {
 	const [emails, setEmails] = useState<string[]>([""]);
 	const [cupon, setCupon] = useState<string>("");
 	const [cardData, setCardData] = useState({ number: "", name: "", expiry: "", cvc: "" });
-	const [loadingPay, setLoadingPay] = useState(false);
 	const [loadingPrice, setLoadingPrice] = useState(false);
 	const [loadingViajes, setLoadingViajes] = useState(false);
 	const [loadingDetalle, setLoadingDetalle] = useState(false);
@@ -32,9 +34,11 @@ export default function EventsMainPage() {
 	const [viajeDetalle, setViajeDetalle] = useState<ViajeDetalleClienteDto | null>(null);
 	const [paradas, setParadas] = useState<ParadaConPrecioDto[]>([]);
 	const [paradaSeleccionada, setParadaSeleccionada] = useState<ParadaConPrecioDto | null>(null);
+	const [paradasDirecciones, setParadasDirecciones] = useState<Record<number, string>>({}); // Direcciones por paradaViajeID
 	const [codigoPago, setCodigoPago] = useState<string | null>(null);
 	const [phones, setPhones] = useState<string[]>([""]);
-
+	const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+	const [showTicket, setShowTicket] = useState(false);
 	// Validación de email
 	const validateEmail = (email: string): boolean => {
 		if (!email) return true; // Opcional
@@ -102,6 +106,35 @@ export default function EventsMainPage() {
 		}
 	}, [step, selectedViaje, paradaSeleccionada, cupon, ticketCount]);
 
+	// Cargar direcciones de paradas cuando cambian
+	useEffect(() => {
+		if (paradas.length === 0) return;
+
+		console.log("📍 Iniciando carga de direcciones para", paradas.length, "paradas");
+
+		const loadDirecciones = async () => {
+			const direccionesMap: Record<number, string> = {};
+
+			for (const parada of paradas) {
+				try {
+					console.log(`🔄 Obteniendo dirección para parada ${parada.paradaViajeID}:`, parada.latitud, parada.longitud);
+					const resultado = await apiGetExactAddress(parada.latitud, parada.longitud);
+					const dir = resultado?.address?.trim() && resultado.address !== "" ? resultado.address : parada.nombreParada;
+					direccionesMap[parada.paradaViajeID] = dir;
+					console.log(`✅ Dirección obtenida: ${dir}`);
+				} catch (error) {
+					console.error(`❌ Error obteniendo dirección para parada ${parada.paradaViajeID}:`, error);
+					direccionesMap[parada.paradaViajeID] = parada.nombreParada;
+				}
+			}
+
+			console.log("📍 Todas las direcciones cargadas:", direccionesMap);
+			setParadasDirecciones(direccionesMap);
+		};
+
+		loadDirecciones();
+	}, [paradas]);
+
 	const handleCardClick = async (ev: EventoDto) => {
 		setSelectedEvent(ev);
 		setModalOpen(true);
@@ -117,6 +150,7 @@ export default function EventsMainPage() {
 		setViajeDetalle(null);
 		setParadas([]);
 		setParadaSeleccionada(null);
+		setParadasDirecciones([]);
 		setCupon("");
 		setCodigoPago(null);
 
@@ -145,8 +179,8 @@ export default function EventsMainPage() {
 		setParadas([]);
 		setParadaSeleccionada(null);
 		setPrecioTotal(null);
+		setParadasDirecciones({});
 
-		// Cargar detalle del viaje con paradas y precios
 		setLoadingDetalle(true);
 		try {
 			const detalle = await viajesService.getDetalleCliente(viaje.viajeID);
@@ -155,10 +189,11 @@ export default function EventsMainPage() {
 				message.error("Este viaje no tiene asientos disponibles. No es posible realizar la compra.");
 			}
 			if (detalle.paradas && detalle.paradas.length > 0) {
-				setParadas(detalle.paradas);
 				// Seleccionar la primera parada por defecto
 				setParadaSeleccionada(detalle.paradas[0]);
 				setPrecioTotal(detalle.paradas[0].totalAPagar * ticketCount);
+				// El useEffect se encargará de cargar las direcciones
+				setParadas(detalle.paradas);
 			}
 		} catch (error) {
 			console.error("Error al cargar detalle del viaje:", error);
@@ -183,6 +218,7 @@ export default function EventsMainPage() {
 		setViajeDetalle(null);
 		setParadas([]);
 		setParadaSeleccionada(null);
+		setParadasDirecciones({});
 		setCodigoPago(null);
 		setCupon("");
 	};
@@ -273,7 +309,10 @@ export default function EventsMainPage() {
 			return;
 		}
 
-		setLoadingPay(true);
+		// Mostrar pantalla de carga
+		setShowLoadingScreen(true);
+		setModalOpen(false);
+
 		try {
 			// Generar un ID de transacción único
 			const transaccionID = `trx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -292,17 +331,20 @@ export default function EventsMainPage() {
 			// Llamar al endpoint de confirmación de pago
 			const pagoResp = await pagosService.confirmarPago(confirmacionData);
 
+			// Esperar 5 segundos antes de mostrar el ticket
+			await new Promise((resolve) => setTimeout(resolve, 5000));
+
 			if (pagoResp?.success) {
-				message.success("¡Pago exitoso! Tus boletos han sido generados.");
-				handleCloseModal();
+				setShowLoadingScreen(false);
+				setShowTicket(true);
 			} else {
+				setShowLoadingScreen(false);
 				message.error(pagoResp?.message || "Error al procesar el pago.");
 			}
 		} catch (err: any) {
 			console.error("❌ Error al confirmar pago:", err);
+			setShowLoadingScreen(false);
 			message.error("Error al confirmar el pago: " + (err?.message || "Error desconocido"));
-		} finally {
-			setLoadingPay(false);
 		}
 	};
 
@@ -457,16 +499,21 @@ export default function EventsMainPage() {
 												}
 											}}
 										>
-											{paradas.map((p) => (
-												<option key={p.paradaViajeID} value={p.paradaViajeID}>
-													{p.nombreParada} - {p.horaEstimadaLlegada} - ${p.totalAPagar.toFixed(2)}
-												</option>
-											))}
+											{paradas.map((p) => {
+												// Obtener la dirección o nombre de parada
+												const displayText = paradasDirecciones[p.paradaViajeID] || p.nombreParada;
+												return (
+													<option key={p.paradaViajeID} value={p.paradaViajeID}>
+														{displayText} - {p.horaEstimadaLlegada} - ${p.totalAPagar.toFixed(2)}
+													</option>
+												);
+											})}
 										</select>
 										{paradaSeleccionada && viajeDetalle && (
 											<div className="w-full bg-green-50 p-3 rounded-md text-sm space-y-1">
 												<p>
-													<strong>Dirección:</strong> {paradaSeleccionada.direccion}
+													<strong>Dirección:</strong>{" "}
+													{paradasDirecciones[paradaSeleccionada.paradaViajeID] || "Cargando..."}
 												</p>
 												<p>
 													<strong>Hora de llegada:</strong> {paradaSeleccionada.horaEstimadaLlegada}
@@ -812,14 +859,7 @@ export default function EventsMainPage() {
 									<Button onClick={() => setStep(2)} size="large" className="flex-1">
 										Atrás
 									</Button>
-									<Button
-										type="primary"
-										loading={loadingPay}
-										onClick={handlePay}
-										size="large"
-										className="flex-1"
-										disabled={!validateCard()}
-									>
+									<Button type="primary" onClick={handlePay} size="large" className="flex-1" disabled={!validateCard()}>
 										Pagar ahora
 									</Button>
 								</div>
@@ -828,6 +868,41 @@ export default function EventsMainPage() {
 					</div>
 				)}
 			</Modal>
+
+			{/* Pantalla de carga */}
+			{showLoadingScreen && <LoadingScreen message="Procesando tu pago..." />}
+
+			{/* Ticket de compra */}
+			{showTicket && selectedEvent && selectedViaje && paradaSeleccionada && codigoPago && (
+				<PurchaseTicket
+					codigoPago={codigoPago}
+					montoTotal={precioTotal || 0}
+					viajeInfo={{
+						fecha: new Date(selectedViaje.fechaSalida).toLocaleDateString("es-ES"),
+						hora: new Date(selectedViaje.fechaSalida).toLocaleTimeString("es-ES", {
+							hour: "2-digit",
+							minute: "2-digit",
+						}),
+						origen: selectedViaje.ciudadOrigen,
+						destino: selectedViaje.ciudadDestino,
+						numeroViaje: selectedViaje.viajeID.toString(),
+					}}
+					paradaInfo={{
+						nombreParada: paradasDirecciones[paradaSeleccionada.paradaViajeID] || paradaSeleccionada.nombreParada,
+						direccion: paradasDirecciones[paradaSeleccionada.paradaViajeID] || "Ubicación no disponible",
+					}}
+					pasajeros={names.map((nombre, idx) => ({
+						nombrePasajero: nombre,
+						emailPasajero: emails[idx] || undefined,
+						telefonoPasajero: phones[idx] || undefined,
+					}))}
+					ticketCount={ticketCount}
+					onClose={() => {
+						setShowTicket(false);
+						handleCloseModal();
+					}}
+				/>
+			)}
 		</div>
 	);
 }
