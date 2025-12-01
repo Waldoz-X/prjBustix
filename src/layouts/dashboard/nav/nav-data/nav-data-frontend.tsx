@@ -301,7 +301,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Mis Boletos",
 				path: "/profile/tickets",
 				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
-				// Visible para todos los usuarios autenticados
+				auth: ["User"],
 			},
 			{
 				title: "Cambiar Contraseña",

@@ -42,7 +42,7 @@ const Main = () => {
 	}, [allItems, pathname]); // ⚡ Solo se ejecuta cuando cambia la ruta
 
 	return (
-		<AuthGuard checkAny={currentNavAuth} fallback={<Page403 />}>
+		<AuthGuard checkAny={currentNavAuth} baseOn="both" fallback={<Page403 />}>
 			<main
 				data-slot="slash-layout-main"
 				className={cn(

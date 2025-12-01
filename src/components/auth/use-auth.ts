@@ -18,7 +18,7 @@ import { useUserInfo, useUserToken } from "@/store/userStore";
  * checkAny(['admin', 'editor'])
  * checkAll(['admin', 'editor'])
  */
-export const useAuthCheck = (baseOn: "role" | "permission" = "permission") => {
+export const useAuthCheck = (baseOn: "role" | "permission" | "both" = "permission") => {
 	const { accessToken } = useUserToken();
 	const { permissions = [], roles = [] } = useUserInfo();
 
@@ -32,7 +32,15 @@ export const useAuthCheck = (baseOn: "role" | "permission" = "permission") => {
 	const isAdmin = normalizedRoles.includes("admin") || normalizedRoles.includes("*");
 
 	// depends on baseOn to select resource pool
-	const resourcePool = baseOn === "role" ? roles : permissions;
+	let resourcePool: any[] = [];
+	if (baseOn === "role") {
+		resourcePool = roles;
+	} else if (baseOn === "permission") {
+		resourcePool = permissions;
+	} else {
+		// both
+		resourcePool = [...roles, ...permissions];
+	}
 
 	// check if item exists
 	const check = (item: string): boolean => {

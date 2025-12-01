@@ -118,7 +118,7 @@ export interface CreateEventoDto {
 }
 
 export interface UpdateEventoDto extends CreateEventoDto {
-	// Update puede tener campos adicionales si es necesario
+	estatus?: number;
 }
 
 export interface EventosFilterParams {
@@ -514,7 +514,22 @@ const updateEvento = async (id: number, payload: UpdateEventoDto): Promise<Event
 		};
 	}
 
-	// horaInicio validations follow (unchanged)
+	// horaInicio debe existir y ser string en formato HH:mm:ss en este punto (se normalizó arriba si vino como ticks)
+	if (!anyPayload.horaInicio) {
+		console.error("[EventosService] horaInicio requerida en payload (update)", anyPayload);
+		throw { status: 400, message: "La hora de inicio (horaInicio) es requerida.", details: { field: "horaInicio" } };
+	}
+	if (typeof anyPayload.horaInicio !== "string") {
+		console.error(
+			"[EventosService] horaInicio debe ser string en formato HH:mm:ss tras normalización (update)",
+			anyPayload.horaInicio,
+		);
+		throw {
+			status: 400,
+			message: "La hora de inicio (horaInicio) debe ser una cadena en formato HH:mm:ss.",
+			details: { field: "horaInicio" },
+		};
+	}
 
 	// NEW: comprobar caracteres prohibidos y construir mapa de errores compatible con ModelState-style
 	const validationErrors: Record<string, string[]> = {};

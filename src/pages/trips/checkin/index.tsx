@@ -33,7 +33,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
-import { Separator } from "@/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
 import { cn } from "@/utils/index";
@@ -76,7 +76,7 @@ export default function CheckInPage() {
 	});
 
 	// Fetch trip details
-	const { data: viajeDetalle, isLoading: isLoadingDetalle } = useQuery({
+	const { data: viajeDetalle } = useQuery({
 		queryKey: ["viaje-detalle", viajeId],
 		queryFn: () => viajesService.getDetalleCliente(Number(viajeId)),
 		enabled: !!viajeId && allowed,
@@ -338,45 +338,32 @@ export default function CheckInPage() {
 	const canStartValidation = currentStop?.estado === "Llegado";
 
 	return (
-		<div className="flex flex-col h-screen bg-gray-50">
-			{/* Sticky Header */}
-			<div className="sticky top-0 z-50 bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
-				<div className="flex items-center gap-3">
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => router.push("/trips/assigned")}
-						className="hover:bg-gray-100 rounded-full"
-					>
-						<ArrowLeft className="h-5 w-5 text-gray-600" />
-					</Button>
-					<div>
-						{isLoadingDetalle ? (
-							<div className="h-6 w-32 bg-gray-200 animate-pulse rounded" />
-						) : (
-							<div className="flex flex-col">
-								<h1 className="text-sm font-bold text-gray-900 leading-tight">{viajeDetalle?.eventoNombre}</h1>
-								<div className="flex items-center text-xs text-muted-foreground gap-1">
-									<Badge variant="outline" className="text-[10px] h-4 px-1 font-mono">
-										{viajeDetalle?.codigoViaje}
-									</Badge>
-									<span>•</span>
-									<span className="truncate max-w-[150px]">{viajeDetalle?.rutaNombre}</span>
-								</div>
-							</div>
-						)}
+		<div className="space-y-6 p-6">
+			{/* Header */}
+			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center gap-2">
+						<Button variant="ghost" size="icon" onClick={() => router.push("/trips/assigned")} className="h-8 w-8">
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+						<h1 className="text-3xl font-bold flex items-center gap-2">
+							<ClipboardList className="h-8 w-8" /> Check-in de Viaje
+						</h1>
+					</div>
+					<div className="flex items-center gap-2 text-muted-foreground ml-10">
+						<Badge variant="outline" className="font-mono">
+							{viajeDetalle?.codigoViaje}
+						</Badge>
+						<span>•</span>
+						<span>{viajeDetalle?.eventoNombre}</span>
 					</div>
 				</div>
-				<div className="flex items-center gap-2">
-					{currentUserAssignment && (
-						<Badge variant="secondary" className="hidden sm:flex bg-blue-50 text-blue-700 border-blue-100">
-							{currentUserAssignment.rolEnViaje}
-						</Badge>
-					)}
+				<div className="flex items-center gap-2 ml-10 md:ml-0">
+					{currentUserAssignment && <Badge variant="secondary">{currentUserAssignment.rolEnViaje}</Badge>}
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="icon">
-								<MoreVertical className="h-5 w-5 text-gray-600" />
+							<Button variant="outline">
+								<MoreVertical className="h-4 w-4 mr-2" /> Opciones
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
@@ -389,350 +376,333 @@ export default function CheckInPage() {
 				</div>
 			</div>
 
-			<div className="flex-1 overflow-y-auto p-4 md:p-6">
-				{isLoadingProgress ? (
-					<div className="flex items-center justify-center h-full">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-					</div>
-				) : !checkinProgress ? (
-					<div className="flex items-center justify-center h-full text-muted-foreground">
-						No se pudo cargar la información del viaje
-					</div>
-				) : (
-					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto pb-20">
-						{/* Left Column: Status & Actions */}
-						<div className="space-y-6 lg:col-span-2">
-							{/* Current Stop Card */}
-							<Card className="border-none shadow-md overflow-hidden">
-								<div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<MapPin className="h-5 w-5 text-blue-400" />
-											<h2 className="font-bold text-lg">
-												{currentStop ? currentStop.nombreParada : "Viaje Completado"}
-											</h2>
-										</div>
-										{currentStop && (
-											<Badge
-												className={cn(
-													"text-xs px-2 py-0.5",
-													currentStop.estado === "Validando"
-														? "bg-green-500 hover:bg-green-600"
-														: "bg-blue-500 hover:bg-blue-600",
-												)}
-											>
-												{currentStop.estado}
-											</Badge>
-										)}
-									</div>
-									<p className="text-sm text-slate-300 mt-1 ml-7">
-										{currentStop?.direccion || "Todas las paradas han sido visitadas"}
-									</p>
+			{isLoadingProgress ? (
+				<div className="flex items-center justify-center min-h-[400px]">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+				</div>
+			) : !checkinProgress ? (
+				<div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+					No se pudo cargar la información del viaje
+				</div>
+			) : (
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					{/* Left Column: Status & Actions */}
+					<div className="space-y-6 lg:col-span-2">
+						{/* Current Stop Card */}
+						<Card>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+								<div className="flex items-center gap-2">
+									<MapPin className="h-5 w-5 text-primary" />
+									<CardTitle className="text-lg">
+										{currentStop ? currentStop.nombreParada : "Viaje Completado"}
+									</CardTitle>
 								</div>
+								{currentStop && (
+									<Badge
+										variant={
+											currentStop.estado === "Validando"
+												? "default"
+												: currentStop.estado === "Completado"
+													? "secondary"
+													: "outline"
+										}
+									>
+										{currentStop.estado}
+									</Badge>
+								)}
+							</CardHeader>
+							<CardContent>
+								<p className="text-sm text-muted-foreground mb-4">
+									{currentStop?.direccion || "Todas las paradas han sido visitadas"}
+								</p>
 
 								{currentStop && (
-									<CardContent className="p-0">
-										<div className="p-4">
-											{canConfirmArrival && (
-												<div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-300">
-													<div className="flex items-start gap-3">
-														<div className="bg-blue-100 p-2 rounded-full">
-															<MapPin className="h-5 w-5 text-blue-600" />
-														</div>
-														<div>
-															<h3 className="font-semibold text-blue-900">Llegada a Parada</h3>
-															<p className="text-sm text-blue-700">Confirma que has llegado a la parada.</p>
-														</div>
-													</div>
-													<Button
-														onClick={() => confirmArrivalMutation.mutate(currentStop.paradaViajeID)}
-														disabled={confirmArrivalMutation.isPending}
-														className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 shadow-sm"
-													>
-														{confirmArrivalMutation.isPending ? "Confirmando..." : "Confirmar Llegada"}
-													</Button>
+									<div className="space-y-4">
+										{canConfirmArrival && (
+											<div className="bg-muted/50 p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+												<div>
+													<h3 className="font-semibold">Llegada a Parada</h3>
+													<p className="text-sm text-muted-foreground">Confirma que has llegado a la parada.</p>
 												</div>
-											)}
+												<Button
+													onClick={() => confirmArrivalMutation.mutate(currentStop.paradaViajeID)}
+													disabled={confirmArrivalMutation.isPending}
+												>
+													{confirmArrivalMutation.isPending ? "Confirmando..." : "Confirmar Llegada"}
+												</Button>
+											</div>
+										)}
 
-											{canConfirmArrival && (
-												<div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-300">
-													<div className="flex items-start gap-3">
-														<div className="bg-blue-100 p-2 rounded-full">
-															<MapPin className="h-5 w-5 text-blue-600" />
-														</div>
-														<div>
-															<h3 className="font-semibold text-blue-900">Llegada a Parada</h3>
-															<p className="text-sm text-blue-700">Confirma que has llegado a la parada.</p>
-														</div>
-													</div>
-													<Button
-														onClick={() => confirmArrivalMutation.mutate(currentStop.paradaViajeID)}
-														disabled={confirmArrivalMutation.isPending}
-														className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 shadow-sm"
-													>
-														{confirmArrivalMutation.isPending ? "Confirmando..." : "Confirmar Llegada"}
-													</Button>
+										{canStartValidation && (
+											<div className="bg-muted/50 p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+												<div>
+													<h3 className="font-semibold">Iniciar Abordaje</h3>
+													<p className="text-sm text-muted-foreground">Comienza la validación de pasajeros.</p>
 												</div>
-											)}
+												<Button
+													onClick={() => startValidationMutation.mutate(currentStop.paradaViajeID)}
+													disabled={startValidationMutation.isPending}
+												>
+													{startValidationMutation.isPending ? "Iniciando..." : "Iniciar Validación"}
+												</Button>
+											</div>
+										)}
 
-											{canStartValidation && (
-												<div className="bg-green-50 border border-green-100 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-300">
-													<div className="flex items-start gap-3">
-														<div className="bg-green-100 p-2 rounded-full">
-															<Bus className="h-5 w-5 text-green-600" />
-														</div>
-														<div>
-															<h3 className="font-semibold text-green-900">Iniciar Abordaje</h3>
-															<p className="text-sm text-green-700">Comienza la validación de pasajeros.</p>
-														</div>
-													</div>
-													<Button
-														onClick={() => startValidationMutation.mutate(currentStop.paradaViajeID)}
-														disabled={startValidationMutation.isPending}
-														className="w-full sm:w-auto bg-green-600 hover:bg-green-700 shadow-sm"
-													>
-														{startValidationMutation.isPending ? "Iniciando..." : "Iniciar Validación"}
-													</Button>
-												</div>
-											)}
+										{isStopActive && (
+											<Tabs defaultValue="scanner" className="w-full">
+												<TabsList className="grid w-full grid-cols-2">
+													<TabsTrigger value="scanner">
+														<QrCode className="h-4 w-4 mr-2" />
+														Escáner
+													</TabsTrigger>
+													<TabsTrigger value="manifest">
+														<ClipboardList className="h-4 w-4 mr-2" />
+														Lista
+													</TabsTrigger>
+												</TabsList>
 
-											{isStopActive && (
-												<Tabs defaultValue="scanner" className="w-full mt-2">
-													<TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
-														<TabsTrigger
-															value="scanner"
-															className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all"
-														>
-															<QrCode className="h-4 w-4 mr-2" />
-															Escáner
-														</TabsTrigger>
-														<TabsTrigger
-															value="manifest"
-															className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all"
-														>
-															<ClipboardList className="h-4 w-4 mr-2" />
-															Lista
-														</TabsTrigger>
-													</TabsList>
-
-													<TabsContent value="scanner" className="mt-6 space-y-6 focus-visible:ring-0">
-														<div className="flex flex-col gap-6">
-															{/* Immersive Scanner UI */}
-															<div className="relative group">
-																<div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl opacity-75 blur group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-																<div className="relative bg-white rounded-xl p-6 shadow-xl">
-																	<div className="flex flex-col items-center justify-center space-y-4">
-																		<div className="relative w-full max-w-xs aspect-square bg-gray-900 rounded-lg overflow-hidden border-4 border-gray-800 shadow-inner flex items-center justify-center">
-																			{/* Scanning Animation Line */}
-																			<div className="absolute top-0 left-0 w-full h-1 bg-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.5)] animate-[scan_2s_linear_infinite]" />
-
-																			<QrCode className="h-24 w-24 text-gray-700 opacity-20" />
-																			<p className="absolute bottom-4 text-xs text-gray-400 font-mono animate-pulse">
-																				WAITING FOR SCAN...
-																			</p>
-																		</div>
-
-																		<div className="w-full max-w-xs space-y-2">
-																			<Input
-																				placeholder="Haz clic aquí y escanea..."
-																				value={qrInput}
-																				onChange={(e) => setQrInput(e.target.value)}
-																				onKeyDown={(e) => {
-																					if (e.key === "Enter" && qrInput) {
-																						validateTicketMutation.mutate(qrInput);
-																					}
-																				}}
-																				className="text-center font-mono text-lg h-12 border-2 focus:border-blue-500 transition-all"
-																				autoFocus
-																			/>
-																			<p className="text-xs text-center text-muted-foreground">
-																				Presiona Enter para validar manualmente
-																			</p>
-																		</div>
-																	</div>
-																</div>
+												<TabsContent value="scanner" className="mt-6 space-y-6">
+													<Card className="border-dashed">
+														<CardContent className="flex flex-col items-center justify-center p-10 space-y-6">
+															<div className="relative h-40 w-40 flex items-center justify-center bg-muted rounded-xl">
+																<QrCode className="h-20 w-20 text-muted-foreground opacity-50" />
+																<div className="absolute inset-0 border-2 border-primary/20 rounded-xl animate-pulse" />
 															</div>
 
-															{/* Validation Result Overlay */}
-															{validationResult && (
-																<button
-																	type="button"
-																	className={cn(
-																		"fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 border-none cursor-default",
-																	)}
-																	onClick={() => setValidationResult(null)}
+															<div className="w-full max-w-sm space-y-2">
+																<Input
+																	placeholder="Haz clic aquí y escanea..."
+																	value={qrInput}
+																	onChange={(e) => setQrInput(e.target.value)}
 																	onKeyDown={(e) => {
-																		if (e.key === "Escape") {
-																			setValidationResult(null);
+																		if (e.key === "Enter" && qrInput) {
+																			validateTicketMutation.mutate(qrInput);
 																		}
 																	}}
-																>
+																	className="text-center font-mono text-lg h-12"
+																	autoFocus
+																/>
+																<p className="text-xs text-center text-muted-foreground">
+																	Presiona Enter para validar manualmente
+																</p>
+															</div>
+														</CardContent>
+													</Card>
+
+													{/* Validation Result Overlay */}
+													{validationResult && (
+														<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+															<Card className="w-full max-w-md mx-4 animate-in zoom-in-95">
+																<CardContent className="p-6 flex flex-col items-center text-center space-y-4">
 																	<div
 																		className={cn(
-																			"w-full max-w-sm mx-4 p-6 rounded-2xl shadow-2xl transform transition-all scale-100 animate-in zoom-in-95 duration-300 cursor-auto text-left",
-																			validationResult.success ? "bg-white" : "bg-white",
+																			"h-16 w-16 rounded-full flex items-center justify-center",
+																			validationResult.success ? "bg-green-100" : "bg-red-100",
 																		)}
-																		onClick={(e) => e.stopPropagation()}
-																		role="dialog"
-																		aria-modal="true"
 																	>
-																		<div className="flex flex-col items-center text-center space-y-4">
-																			<div
-																				className={cn(
-																					"h-20 w-20 rounded-full flex items-center justify-center mb-2",
-																					validationResult.success ? "bg-green-100" : "bg-red-100",
-																				)}
-																			>
-																				{validationResult.success ? (
-																					<CheckCircle2 className="h-10 w-10 text-green-600" />
-																				) : (
-																					<XCircle className="h-10 w-10 text-red-600" />
-																				)}
-																			</div>
-
-																			<h3
-																				className={cn(
-																					"text-2xl font-bold",
-																					validationResult.success ? "text-green-700" : "text-red-700",
-																				)}
-																			>
-																				{validationResult.success ? "¡Acceso Permitido!" : "Acceso Denegado"}
-																			</h3>
-
-																			<p className="text-gray-600 text-lg font-medium">{validationResult.message}</p>
-
-																			{validationResult.success && (
-																				<div className="bg-gray-50 rounded-xl p-4 w-full border border-gray-100 mt-2">
-																					<p className="text-sm text-gray-500 uppercase tracking-wider font-semibold mb-1">
-																						Pasajero
-																					</p>
-																					<p className="text-xl font-bold text-gray-900 mb-3">
-																						{validationResult.pasajero}
-																					</p>
-
-																					<div className="flex justify-center">
-																						<Badge
-																							variant="outline"
-																							className="text-lg px-4 py-1 border-green-200 bg-green-50 text-green-800"
-																						>
-																							Asiento: {validationResult.asiento}
-																						</Badge>
-																					</div>
-																				</div>
-																			)}
-
-																			<Button
-																				className="w-full mt-4"
-																				variant={validationResult.success ? "default" : "destructive"}
-																				onClick={() => setValidationResult(null)}
-																			>
-																				Continuar Escaneando
-																			</Button>
-																		</div>
+																		{validationResult.success ? (
+																			<CheckCircle2 className="h-8 w-8 text-green-600" />
+																		) : (
+																			<XCircle className="h-8 w-8 text-red-600" />
+																		)}
 																	</div>
-																</button>
-															)}
-														</div>
-													</TabsContent>
 
-													<TabsContent value="manifest" className="mt-4 focus-visible:ring-0">
-														<div className="space-y-4">
-															{/* Filters */}
-															<div className="flex flex-col sm:flex-row gap-3">
-																<div className="relative flex-1">
-																	<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-																	<Input
-																		placeholder="Buscar pasajero..."
-																		value={manifestoSearch}
-																		onChange={(e) => setManifiestoSearch(e.target.value)}
-																		className="pl-9"
-																	/>
-																</div>
-																<Select value={manifestoFilter} onValueChange={setManifiestoFilter}>
-																	<SelectTrigger className="w-full sm:w-[160px]">
-																		<Filter className="h-4 w-4 mr-2" />
-																		<SelectValue />
-																	</SelectTrigger>
-																	<SelectContent>
-																		<SelectItem value="todos">Todos</SelectItem>
-																		<SelectItem value="abordados">Abordados</SelectItem>
-																		<SelectItem value="pendientes">Pendientes</SelectItem>
-																		<SelectItem value="noshow">No Show</SelectItem>
-																	</SelectContent>
-																</Select>
-															</div>
+																	<h3 className="text-2xl font-bold">
+																		{validationResult.success ? "¡Acceso Permitido!" : "Acceso Denegado"}
+																	</h3>
 
-															{/* Stats Bar */}
-															<div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-																<Badge variant="secondary" className="whitespace-nowrap">
-																	Total: {manifesto?.pasajeros.length || 0}
-																</Badge>
-																<Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 whitespace-nowrap">
-																	Abordados: {manifesto?.pasajerosAbordados || 0}
-																</Badge>
-																<Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200 whitespace-nowrap">
-																	Pendientes: {manifesto?.pasajerosPendientes || 0}
-																</Badge>
-															</div>
+																	<p className="text-muted-foreground">{validationResult.message}</p>
 
-															{/* Passenger List */}
-															<div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-																<div className="max-h-[500px] overflow-y-auto divide-y">
-																	{filteredPassengers.length === 0 ? (
-																		<div className="p-8 text-center text-muted-foreground">
-																			No se encontraron pasajeros
+																	{validationResult.success && (
+																		<div className="bg-muted p-4 rounded-lg w-full">
+																			<p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+																				Pasajero
+																			</p>
+																			<p className="text-lg font-bold mb-2">{validationResult.pasajero}</p>
+																			<Badge variant="outline" className="text-base px-4 py-1">
+																				Asiento: {validationResult.asiento}
+																			</Badge>
 																		</div>
-																	) : (
-																		filteredPassengers.map((pasajero) => (
-																			<div
-																				key={pasajero.boletoID}
-																				className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors active:bg-gray-100"
-																			>
-																				<div className="flex items-center gap-3 overflow-hidden">
-																					<div
-																						className={cn(
-																							"h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-																							pasajero.estadoAbordaje === "Abordado"
-																								? "bg-green-100 text-green-700"
-																								: "bg-gray-100 text-gray-600",
-																						)}
-																					>
-																						{pasajero.clienteNombre.charAt(0)}
-																					</div>
-																					<div className="min-w-0">
-																						<p className="font-semibold text-sm truncate">{pasajero.clienteNombre}</p>
-																						<div className="flex items-center gap-2 text-xs text-muted-foreground">
-																							<Badge variant="outline" className="h-5 px-1.5 font-mono bg-white">
-																								{pasajero.asientoAsignado}
-																							</Badge>
-																							<span className="truncate">{pasajero.clienteEmail}</span>
-																						</div>
-																					</div>
+																	)}
+
+																	<Button
+																		className="w-full"
+																		variant={validationResult.success ? "default" : "destructive"}
+																		onClick={() => setValidationResult(null)}
+																	>
+																		Continuar
+																	</Button>
+																</CardContent>
+															</Card>
+														</div>
+													)}
+												</TabsContent>
+
+												<TabsContent value="manifest" className="mt-6 space-y-4">
+													<div className="flex flex-col sm:flex-row gap-4">
+														<div className="relative flex-1">
+															<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+															<Input
+																placeholder="Buscar pasajero..."
+																value={manifestoSearch}
+																onChange={(e) => setManifiestoSearch(e.target.value)}
+																className="pl-9"
+															/>
+														</div>
+														<Select value={manifestoFilter} onValueChange={setManifiestoFilter}>
+															<SelectTrigger className="w-full sm:w-[180px]">
+																<Filter className="h-4 w-4 mr-2" />
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="todos">Todos</SelectItem>
+																<SelectItem value="abordados">Abordados</SelectItem>
+																<SelectItem value="pendientes">Pendientes</SelectItem>
+																<SelectItem value="noshow">No Show</SelectItem>
+															</SelectContent>
+														</Select>
+													</div>
+
+													<div className="flex gap-2 overflow-x-auto pb-2">
+														<Badge variant="secondary">Total: {manifesto?.pasajeros.length || 0}</Badge>
+														<Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
+															Abordados: {manifesto?.pasajerosAbordados || 0}
+														</Badge>
+														<Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
+															Pendientes: {manifesto?.pasajerosPendientes || 0}
+														</Badge>
+													</div>
+
+													{/* Desktop Table */}
+													<div className="hidden md:block rounded-md border">
+														<Table>
+															<TableHeader>
+																<TableRow>
+																	<TableHead>Pasajero</TableHead>
+																	<TableHead>Asiento</TableHead>
+																	<TableHead>Estado</TableHead>
+																	<TableHead className="text-right">Acciones</TableHead>
+																</TableRow>
+															</TableHeader>
+															<TableBody>
+																{filteredPassengers.length === 0 ? (
+																	<TableRow>
+																		<TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+																			No se encontraron pasajeros
+																		</TableCell>
+																	</TableRow>
+																) : (
+																	filteredPassengers.map((pasajero) => (
+																		<TableRow key={pasajero.boletoID}>
+																			<TableCell>
+																				<div className="flex flex-col">
+																					<span className="font-medium">{pasajero.clienteNombre}</span>
+																					<span className="text-xs text-muted-foreground">{pasajero.clienteEmail}</span>
 																				</div>
-																				<div className="ml-2 shrink-0">
-																					{pasajero.estadoAbordaje === "Abordado" ? (
-																						<div className="bg-green-100 text-green-700 p-1.5 rounded-full">
-																							<CheckCircle2 className="h-5 w-5" />
-																						</div>
-																					) : pasajero.estadoAbordaje === "NoShow" ? (
-																						<Badge variant="destructive">No Show</Badge>
-																					) : (
-																						<Button
-																							size="sm"
-																							variant="outline"
-																							className="h-8 border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-																							onClick={() => validateTicketMutation.mutate(pasajero.codigoQR)}
-																							disabled={validateTicketMutation.isPending}
-																						>
-																							Validar
-																						</Button>
-																					)}
+																			</TableCell>
+																			<TableCell>
+																				<Badge variant="outline" className="font-mono">
+																					{pasajero.asientoAsignado}
+																				</Badge>
+																			</TableCell>
+																			<TableCell>
+																				{pasajero.estadoAbordaje === "Abordado" ? (
+																					<Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+																						Abordado
+																					</Badge>
+																				) : pasajero.estadoAbordaje === "NoShow" ? (
+																					<Badge variant="destructive">No Show</Badge>
+																				) : (
+																					<Badge variant="secondary">Pendiente</Badge>
+																				)}
+																			</TableCell>
+																			<TableCell className="text-right">
+																				<div className="flex justify-end gap-2">
 																					{pasajero.estadoAbordaje !== "Abordado" &&
 																						pasajero.estadoAbordaje !== "NoShow" && (
+																							<>
+																								<Button
+																									size="sm"
+																									variant="outline"
+																									onClick={() => validateTicketMutation.mutate(pasajero.codigoQR)}
+																									disabled={validateTicketMutation.isPending}
+																								>
+																									Validar
+																								</Button>
+																								<Button
+																									size="sm"
+																									variant="ghost"
+																									className="text-destructive hover:text-destructive"
+																									onClick={() => {
+																										if (currentStop) {
+																											markNoShowMutation.mutate({
+																												boletoId: pasajero.boletoID,
+																												paradaId: currentStop.paradaViajeID,
+																											});
+																										}
+																									}}
+																									disabled={markNoShowMutation.isPending}
+																								>
+																									No Show
+																								</Button>
+																							</>
+																						)}
+																				</div>
+																			</TableCell>
+																		</TableRow>
+																	))
+																)}
+															</TableBody>
+														</Table>
+													</div>
+
+													{/* Mobile List */}
+													<div className="md:hidden space-y-4">
+														{filteredPassengers.length === 0 ? (
+															<div className="text-center py-8 text-muted-foreground border rounded-lg">
+																No se encontraron pasajeros
+															</div>
+														) : (
+															filteredPassengers.map((pasajero) => (
+																<Card key={pasajero.boletoID}>
+																	<CardContent className="p-4">
+																		<div className="flex justify-between items-start mb-2">
+																			<div>
+																				<p className="font-semibold">{pasajero.clienteNombre}</p>
+																				<p className="text-xs text-muted-foreground">{pasajero.clienteEmail}</p>
+																			</div>
+																			<Badge variant="outline" className="font-mono">
+																				{pasajero.asientoAsignado}
+																			</Badge>
+																		</div>
+																		<div className="flex items-center justify-between mt-4 border-t pt-4">
+																			<div>
+																				{pasajero.estadoAbordaje === "Abordado" ? (
+																					<Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+																						Abordado
+																					</Badge>
+																				) : pasajero.estadoAbordaje === "NoShow" ? (
+																					<Badge variant="destructive">No Show</Badge>
+																				) : (
+																					<Badge variant="secondary">Pendiente</Badge>
+																				)}
+																			</div>
+																			<div className="flex gap-2">
+																				{pasajero.estadoAbordaje !== "Abordado" &&
+																					pasajero.estadoAbordaje !== "NoShow" && (
+																						<>
+																							<Button
+																								size="sm"
+																								variant="outline"
+																								onClick={() => validateTicketMutation.mutate(pasajero.codigoQR)}
+																								disabled={validateTicketMutation.isPending}
+																							>
+																								Validar
+																							</Button>
 																							<Button
 																								size="sm"
 																								variant="ghost"
-																								className="h-8 text-red-600 hover:bg-red-50 hover:text-red-700 ml-2"
+																								className="text-destructive"
 																								onClick={() => {
 																									if (currentStop) {
 																										markNoShowMutation.mutate({
@@ -745,183 +715,181 @@ export default function CheckInPage() {
 																							>
 																								No Show
 																							</Button>
-																						)}
-																				</div>
+																						</>
+																					)}
 																			</div>
-																		))
-																	)}
-																</div>
-															</div>
-														</div>
-													</TabsContent>
+																		</div>
+																	</CardContent>
+																</Card>
+															))
+														)}
+													</div>
 
-													<Separator className="my-6" />
-
-													<div className="flex justify-end pb-4">
-														<Button
-															size="lg"
-															className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 shadow-lg hover:shadow-xl transition-all"
-															onClick={() => setIsFinalizeModalOpen(true)}
-														>
+													<div className="flex justify-end pt-4 border-t">
+														<Button size="lg" onClick={() => setIsFinalizeModalOpen(true)}>
 															Finalizar Validación en Parada
 														</Button>
 													</div>
-												</Tabs>
-											)}
-										</div>
-									</CardContent>
+												</TabsContent>
+											</Tabs>
+										)}
+									</div>
 								)}
-							</Card>
+							</CardContent>
+						</Card>
 
-							{/* Stats Grid */}
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-								<Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-										<p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">
-											Esperados
-										</p>
-										<p className="text-2xl font-bold text-gray-900">{currentStop?.totalPasajerosEsperados || 0}</p>
-									</CardContent>
-								</Card>
-								<Card className="bg-green-50/50 border-green-100 shadow-sm hover:shadow-md transition-shadow">
-									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-										<p className="text-xs text-green-600 uppercase tracking-wider font-semibold mb-1">Abordados</p>
-										<p className="text-2xl font-bold text-green-700">{currentStop?.totalPasajerosAbordados || 0}</p>
-									</CardContent>
-								</Card>
-								<Card className="bg-orange-50/50 border-orange-100 shadow-sm hover:shadow-md transition-shadow">
-									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-										<p className="text-xs text-orange-600 uppercase tracking-wider font-semibold mb-1">Pendientes</p>
-										<p className="text-2xl font-bold text-orange-700">{currentStop?.pasajerosPorValidar || 0}</p>
-									</CardContent>
-								</Card>
-								<Card className="bg-red-50/50 border-red-100 shadow-sm hover:shadow-md transition-shadow">
-									<CardContent className="p-4 flex flex-col items-center justify-center text-center">
-										<p className="text-xs text-red-600 uppercase tracking-wider font-semibold mb-1">No Show</p>
-										<p className="text-2xl font-bold text-red-700">{currentStop?.totalPasajerosNoShow || 0}</p>
-									</CardContent>
-								</Card>
-							</div>
-						</div>
-
-						{/* Right Column: Trip Info & Timeline */}
-						<div className="space-y-6">
-							<Card className="border-none shadow-md">
-								<CardHeader className="pb-3">
-									<CardTitle className="text-base font-semibold flex items-center gap-2">
-										<Bus className="h-4 w-4 text-primary" />
-										Detalles del Viaje
-									</CardTitle>
+						{/* Stats Grid */}
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+							<Card>
+								<CardHeader className="p-4 pb-2">
+									<CardTitle className="text-sm font-medium text-muted-foreground">Esperados</CardTitle>
 								</CardHeader>
-								<CardContent className="space-y-4 text-sm">
-									<div className="flex justify-between py-2 border-b border-gray-100">
-										<span className="text-muted-foreground">Chofer</span>
-										<span className="font-medium">{viajeDetalle?.choferNombre || "No asignado"}</span>
-									</div>
-									<div className="flex justify-between py-2 border-b border-gray-100">
-										<span className="text-muted-foreground">Unidad</span>
-										<span className="font-medium">{viajeDetalle?.unidadPlacas}</span>
-									</div>
-									<div className="flex justify-between py-2 border-b border-gray-100">
-										<span className="text-muted-foreground">Mi Rol</span>
-										<Badge variant="secondary">{currentUserAssignment?.rolEnViaje || "Staff"}</Badge>
-									</div>
-									<div className="pt-2">
-										<div className="flex justify-between items-center mb-2">
-											<span className="text-muted-foreground">Progreso Global</span>
-											<span className="font-bold text-primary">{checkinProgress.porcentajeAvance}%</span>
-										</div>
-										<div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-											<div
-												className="h-full bg-primary transition-all duration-500 ease-out"
-												style={{ width: `${checkinProgress.porcentajeAvance}%` }}
-											/>
-										</div>
-									</div>
+								<CardContent className="p-4 pt-0">
+									<div className="text-2xl font-bold">{currentStop?.totalPasajerosEsperados || 0}</div>
 								</CardContent>
 							</Card>
-
-							<Card className="flex-1 border-none shadow-md">
-								<CardHeader className="pb-3">
-									<CardTitle className="text-base font-semibold flex items-center gap-2">
-										<Clock className="h-4 w-4 text-primary" />
-										Itinerario
-									</CardTitle>
+							<Card>
+								<CardHeader className="p-4 pb-2">
+									<CardTitle className="text-sm font-medium text-muted-foreground">Abordados</CardTitle>
 								</CardHeader>
-								<CardContent className="p-0">
-									<div className="flex flex-col">
-										{checkinProgress.paradas.map((parada, index) => (
-											<div
-												key={parada.paradaViajeID}
-												className={cn(
-													"flex gap-3 p-4 border-b last:border-0 transition-colors relative",
-													parada.paradaViajeID === currentStop?.paradaViajeID ? "bg-blue-50/50" : "hover:bg-gray-50",
-												)}
-											>
-												{parada.paradaViajeID === currentStop?.paradaViajeID && (
-													<div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
-												)}
-												<div className="flex flex-col items-center gap-1 pt-1">
-													<div
-														className={cn(
-															"h-2.5 w-2.5 rounded-full ring-2 ring-white shadow-sm",
-															parada.estado === "Completado"
-																? "bg-green-500"
-																: parada.estado === "Validando"
-																	? "bg-blue-500 animate-pulse"
-																	: "bg-gray-300",
-														)}
-													/>
-													{index < checkinProgress.paradas.length - 1 && (
-														<div className="w-0.5 flex-1 bg-gray-200 my-1" />
-													)}
-												</div>
-												<div className="flex-1 space-y-1">
-													<div className="flex items-center justify-between">
-														<p
-															className={cn(
-																"font-medium text-sm",
-																parada.paradaViajeID === currentStop?.paradaViajeID && "text-blue-700",
-															)}
-														>
-															{parada.nombreParada}
-														</p>
-														<span className="text-xs text-muted-foreground font-mono">
-															{new Date(parada.horaEstimadaLlegada).toLocaleTimeString([], {
-																hour: "2-digit",
-																minute: "2-digit",
-															})}
-														</span>
-													</div>
-													<p className="text-xs text-muted-foreground line-clamp-1">{parada.direccion}</p>
-													<div className="flex items-center gap-2 mt-2">
-														<Badge
-															variant="secondary"
-															className={cn(
-																"text-[10px] h-5 px-1.5",
-																parada.estado === "Completado" && "bg-green-100 text-green-700 hover:bg-green-100",
-																parada.estado === "Validando" && "bg-blue-100 text-blue-700 hover:bg-blue-100",
-															)}
-														>
-															{parada.estado}
-														</Badge>
-														{parada.totalPasajerosAbordados > 0 && (
-															<span className="text-[10px] text-muted-foreground flex items-center gap-1">
-																<Users className="h-3 w-3" />
-																{parada.totalPasajerosAbordados}
-															</span>
-														)}
-													</div>
-												</div>
-											</div>
-										))}
-									</div>
+								<CardContent className="p-4 pt-0">
+									<div className="text-2xl font-bold text-green-600">{currentStop?.totalPasajerosAbordados || 0}</div>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader className="p-4 pb-2">
+									<CardTitle className="text-sm font-medium text-muted-foreground">Pendientes</CardTitle>
+								</CardHeader>
+								<CardContent className="p-4 pt-0">
+									<div className="text-2xl font-bold text-orange-600">{currentStop?.pasajerosPorValidar || 0}</div>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader className="p-4 pb-2">
+									<CardTitle className="text-sm font-medium text-muted-foreground">No Show</CardTitle>
+								</CardHeader>
+								<CardContent className="p-4 pt-0">
+									<div className="text-2xl font-bold text-destructive">{currentStop?.totalPasajerosNoShow || 0}</div>
 								</CardContent>
 							</Card>
 						</div>
 					</div>
-				)}
-			</div>
+
+					{/* Right Column: Trip Info & Timeline */}
+					<div className="space-y-6">
+						<Card>
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2 text-lg">
+									<Bus className="h-5 w-5" /> Detalles del Viaje
+								</CardTitle>
+							</CardHeader>
+							<CardContent className="space-y-4">
+								<div className="flex justify-between py-2 border-b">
+									<span className="text-muted-foreground">Chofer</span>
+									<span className="font-medium">{viajeDetalle?.choferNombre || "No asignado"}</span>
+								</div>
+								<div className="flex justify-between py-2 border-b">
+									<span className="text-muted-foreground">Unidad</span>
+									<span className="font-medium">{viajeDetalle?.unidadPlacas}</span>
+								</div>
+								<div className="flex justify-between py-2 border-b">
+									<span className="text-muted-foreground">Mi Rol</span>
+									<Badge variant="secondary">{currentUserAssignment?.rolEnViaje || "Staff"}</Badge>
+								</div>
+								<div className="pt-2 space-y-2">
+									<div className="flex justify-between items-center">
+										<span className="text-sm text-muted-foreground">Progreso Global</span>
+										<span className="font-bold text-primary">{checkinProgress.porcentajeAvance}%</span>
+									</div>
+									<div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+										<div
+											className="h-full bg-primary transition-all duration-500 ease-out"
+											style={{ width: `${checkinProgress.porcentajeAvance}%` }}
+										/>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+
+						<Card>
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2 text-lg">
+									<Clock className="h-5 w-5" /> Itinerario
+								</CardTitle>
+							</CardHeader>
+							<CardContent className="p-0">
+								<div className="flex flex-col">
+									{checkinProgress.paradas.map((parada, index) => (
+										<div
+											key={parada.paradaViajeID}
+											className={cn(
+												"flex gap-3 p-4 border-b last:border-0 transition-colors relative",
+												parada.paradaViajeID === currentStop?.paradaViajeID ? "bg-muted/50" : "",
+											)}
+										>
+											{parada.paradaViajeID === currentStop?.paradaViajeID && (
+												<div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+											)}
+											<div className="flex flex-col items-center gap-1 pt-1">
+												<div
+													className={cn(
+														"h-2.5 w-2.5 rounded-full ring-2 ring-white shadow-sm",
+														parada.estado === "Completado"
+															? "bg-green-500"
+															: parada.estado === "Validando"
+																? "bg-primary animate-pulse"
+																: "bg-muted-foreground/30",
+													)}
+												/>
+												{index < checkinProgress.paradas.length - 1 && <div className="w-0.5 flex-1 bg-muted my-1" />}
+											</div>
+											<div className="flex-1 space-y-1">
+												<div className="flex items-center justify-between">
+													<p
+														className={cn(
+															"font-medium text-sm",
+															parada.paradaViajeID === currentStop?.paradaViajeID && "text-primary",
+														)}
+													>
+														{parada.nombreParada}
+													</p>
+													<span className="text-xs text-muted-foreground font-mono">
+														{new Date(parada.horaEstimadaLlegada).toLocaleTimeString([], {
+															hour: "2-digit",
+															minute: "2-digit",
+														})}
+													</span>
+												</div>
+												<p className="text-xs text-muted-foreground line-clamp-1">{parada.direccion}</p>
+												<div className="flex items-center gap-2 mt-2">
+													<Badge
+														variant={
+															parada.estado === "Completado"
+																? "secondary"
+																: parada.estado === "Validando"
+																	? "default"
+																	: "outline"
+														}
+														className="text-[10px] h-5 px-1.5"
+													>
+														{parada.estado}
+													</Badge>
+													{parada.totalPasajerosAbordados > 0 && (
+														<span className="text-[10px] text-muted-foreground flex items-center gap-1">
+															<Users className="h-3 w-3" />
+															{parada.totalPasajerosAbordados}
+														</span>
+													)}
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+							</CardContent>
+						</Card>
+					</div>
+				</div>
+			)}
 
 			{/* Incident Modal */}
 			<Dialog open={isIncidentModalOpen} onOpenChange={setIsIncidentModalOpen}>
@@ -1042,7 +1010,6 @@ export default function CheckInPage() {
 								})
 							}
 							disabled={finalizeValidationMutation.isPending}
-							className="bg-slate-900 hover:bg-slate-800"
 						>
 							{finalizeValidationMutation.isPending ? "Finalizando..." : "Confirmar y Finalizar"}
 						</Button>

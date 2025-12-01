@@ -721,6 +721,7 @@ export default function EventosPage() {
 		const payload: UpdateEventoDto = {
 			dto,
 			horaInicio: timeStr,
+			estatus: selectedEvento.estatus,
 		};
 
 		console.log("[EventosPage] update payload (api format):", payload);
@@ -961,7 +962,7 @@ export default function EventosPage() {
 							{formErrors.descripcion && <p className="text-sm text-destructive mt-1">{formErrors.descripcion}</p>}
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div className="space-y-2">
 								<Label htmlFor="tipoEvento">Tipo de Evento</Label>
 								<Select value={formData.tipoEvento} onValueChange={(val) => handleChange("tipoEvento", val)}>
@@ -989,6 +990,19 @@ export default function EventosPage() {
 									onBlur={() => validateField("fecha")}
 								/>
 								{formErrors.fecha && <p className="text-sm text-destructive mt-1">{formErrors.fecha}</p>}
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="hora">
+									Hora de Inicio <span className="text-destructive">*</span>
+								</Label>
+								<Input
+									id="hora"
+									type="time"
+									value={formData.hora}
+									onChange={(e) => handleChange("hora", e.target.value)}
+									onBlur={() => validateField("hora")}
+								/>
+								{formErrors.hora && <p className="text-sm text-destructive mt-1">{formErrors.hora}</p>}
 							</div>
 						</div>
 
@@ -1156,7 +1170,7 @@ export default function EventosPage() {
 							{formErrors.descripcion && <p className="text-sm text-destructive mt-1">{formErrors.descripcion}</p>}
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div className="space-y-2">
 								<Label htmlFor="tipoEvento">Tipo de Evento</Label>
 								<Select value={formData.tipoEvento} onValueChange={(val) => handleChange("tipoEvento", val)}>
@@ -1184,6 +1198,19 @@ export default function EventosPage() {
 									onBlur={() => validateField("fecha")}
 								/>
 								{formErrors.fecha && <p className="text-sm text-destructive mt-1">{formErrors.fecha}</p>}
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="hora">
+									Hora de Inicio <span className="text-destructive">*</span>
+								</Label>
+								<Input
+									id="hora"
+									type="time"
+									value={formData.hora}
+									onChange={(e) => handleChange("hora", e.target.value)}
+									onBlur={() => validateField("hora")}
+								/>
+								{formErrors.hora && <p className="text-sm text-destructive mt-1">{formErrors.hora}</p>}
 							</div>
 						</div>
 

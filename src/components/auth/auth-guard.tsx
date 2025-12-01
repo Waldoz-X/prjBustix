@@ -26,7 +26,7 @@ interface AuthGuardProps {
 	 * The type of check to perform: 'role' or 'permission'
 	 * @default 'permission'
 	 */
-	baseOn?: "role" | "permission";
+	baseOn?: "role" | "permission" | "both";
 }
 
 /**
