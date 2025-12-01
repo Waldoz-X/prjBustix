@@ -8,8 +8,11 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{ path: "dashboard", element: Component("/pages/dashboard") },
 		{ path: "notifications", element: Component("/pages/notifications") },
 
-		// Eventos Masivos
-		{ path: "events", element: Component("/pages/management/events") },
+		// Compra de Boletos (Acceso público para usuarios)
+		{ path: "events", element: Component("/pages/events") },
+
+		// Gestión de Eventos (Solo Admin/Manager)
+		{ path: "management/events", element: Component("/pages/management/events") },
 
 		{ path: "rutas", element: Component("/pages/rutas") },
 		{ path: "tickets", element: Component("/pages/tickets") },
