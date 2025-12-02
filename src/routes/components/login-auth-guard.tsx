@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useUserActions, useUserToken } from "@/store/userStore";
 import { clearSession, isTokenValid } from "@/utils/jwt";
@@ -16,10 +16,15 @@ export default function LoginAuthGuard({ children }: Props) {
 	const router = useRouter();
 	const { accessToken } = useUserToken();
 	const { clearUserInfoAndToken } = useUserActions();
+	const hasRedirected = useRef(false);
 
 	const check = useCallback(() => {
 		// Verificar si hay token y si es válido
 		if (!accessToken || !isTokenValid(accessToken)) {
+			// Evitar múltiples redirecciones
+			if (hasRedirected.current) return;
+			hasRedirected.current = true;
+
 			// Limpiar sesión inválida
 			clearSession();
 			clearUserInfoAndToken();
@@ -33,8 +38,10 @@ export default function LoginAuthGuard({ children }: Props) {
 				});
 			}
 
-			// Redirigir al login
-			router.replace("/auth/login");
+			// Redirigir al login usando microtask para evitar conflictos de DOM
+			Promise.resolve().then(() => {
+				router.replace("/auth/login");
+			});
 		}
 	}, [router, accessToken, clearUserInfoAndToken]);
 

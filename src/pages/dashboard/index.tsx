@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bus, Calendar, Loader2, TrendingUp, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import reportesService from "@/api/services/reportesService";
 import unidadService from "@/api/services/unidadService";
 import { Chart, useChart } from "@/components/chart";
 import Icon from "@/components/icon/icon";
+import { useUserInfo } from "@/store/userStore";
 import { Badge } from "@/ui/badge";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
@@ -16,14 +17,28 @@ import { rgbAlpha } from "@/utils/theme";
 import DashboardBanner from "./components/dashboard-banner";
 
 export default function DashboardPage() {
+	const navigate = useNavigate();
+	const user = useUserInfo();
+
+	// Time Range State
+	const [timeRange, setTimeRange] = useState("30d");
+
+	// Verificar si el usuario tiene el rol "User" (usuario regular) - DESPUÉS de todos los hooks
+	useEffect(() => {
+		const userRoles = user?.roles?.map((r) => (typeof r === "string" ? r : r?.code || r?.name || r?.id || "")) || [];
+		const hasUserRole = userRoles.some((role) => role.toLowerCase() === "user");
+
+		if (hasUserRole) {
+			// Redirigir a dashboard de usuario
+			navigate("/dashboard/user", { replace: true });
+		}
+	}, [user, navigate]);
+
 	// Fetch Dashboard Metrics
 	const { data: dashboardData, isLoading: isLoadingDashboard } = useQuery({
 		queryKey: ["dashboard-stats"],
 		queryFn: reportesService.getDashboard,
 	});
-
-	// Time Range State
-	const [timeRange, setTimeRange] = useState("30d");
 
 	// Fetch Sales Report (for charts)
 	const { startDate, endDate } = useMemo(() => {

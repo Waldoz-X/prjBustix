@@ -11,6 +11,7 @@ import { Checkbox } from "@/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { cn } from "@/utils";
+import { getUserInfoFromToken } from "@/utils/jwt";
 import { logger } from "@/utils/logger";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 
@@ -36,11 +37,26 @@ export function LoginForm({ className }: { className?: string }) {
 		setLoading(true);
 		try {
 			await signIn(values);
-			// Pequeño delay para que el usuario vea la notificación de éxito
-			setTimeout(() => {
-				// Redirigir al dashboard después del login exitoso
-				navigate(GLOBAL_CONFIG.defaultRoute, { replace: true });
-			}, 500);
+
+			// Extraer información directamente del token que se acaba de obtener
+			// Usamos un microtask (Promise) en lugar de setTimeout para evitar conflictos de DOM
+			Promise.resolve().then(() => {
+				const token = localStorage.getItem("token");
+				if (token) {
+					const userInfo = getUserInfoFromToken(token);
+					const hasUserRole = userInfo?.roles?.some((role) => role.toLowerCase() === "user");
+
+					// Redirigir según el rol
+					if (hasUserRole) {
+						navigate("/dashboard/user", { replace: true });
+					} else {
+						navigate(GLOBAL_CONFIG.defaultRoute, { replace: true });
+					}
+				} else {
+					// Si no hay token, redirigir a la ruta por defecto
+					navigate(GLOBAL_CONFIG.defaultRoute, { replace: true });
+				}
+			});
 		} catch (error) {
 			// El error ya es manejado en el store con mensajes del backend
 			logger.error("Login failed:", error);

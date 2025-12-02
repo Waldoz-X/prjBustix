@@ -6,6 +6,7 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 	return [
 		// Dashboard y Notificaciones
 		{ path: "dashboard", element: Component("/pages/dashboard") },
+		{ path: "dashboard/user", element: Component("/pages/dashboard/user-dashboard") },
 		{ path: "notifications", element: Component("/pages/notifications") },
 
 		// Compra de Boletos (Acceso público para usuarios)

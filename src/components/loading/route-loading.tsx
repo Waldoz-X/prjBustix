@@ -1,65 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Progress } from "@/ui/progress";
 
 export function RouteLoadingProgress() {
 	const [progress, setProgress] = useState(0);
+	const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+	const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
 	useEffect(() => {
-		let lastHref = window.location.href;
-		let timer: NodeJS.Timeout;
+		// Limpiar timers anteriores
+		if (timerRef.current) clearTimeout(timerRef.current);
+		if (intervalRef.current) clearInterval(intervalRef.current);
 
-		const handleRouteChange = () => {
-			setProgress(0);
-			let currentProgress = 0;
+		// Resetear progress al cambiar de ruta
+		setProgress(0);
 
-			const interval = setInterval(() => {
-				currentProgress += 2;
-				setProgress(currentProgress);
-			}, 5);
+		// Iniciar barra de progreso
+		intervalRef.current = setInterval(() => {
+			setProgress((prev) => Math.min(prev + 2, 90)); // No sobrepasar 90 hasta completar
+		}, 5);
 
-			timer = setTimeout(() => {
-				clearInterval(interval);
-				setProgress(100);
-				setTimeout(() => setProgress(0), 100);
-			}, 500);
+		// Completar la barra después de 500ms
+		timerRef.current = setTimeout(() => {
+			if (intervalRef.current) clearInterval(intervalRef.current);
+			setProgress(100);
+			// Ocultar barra después de completarse
+			setTimeout(() => setProgress(0), 100);
+		}, 500);
 
-			return () => {
-				clearInterval(interval);
-				clearTimeout(timer);
-			};
-		};
-
-		// 监听 href 变化
-		const observer = new MutationObserver(() => {
-			const currentHref = window.location.href;
-			if (currentHref !== lastHref) {
-				lastHref = currentHref;
-				handleRouteChange();
-			}
-		});
-
-		// 观察整个文档的变化
-		observer.observe(document, {
-			subtree: true,
-			childList: true,
-		});
-
-		// 监听 popstate 事件（处理浏览器前进后退）
-		window.addEventListener("popstate", handleRouteChange);
-
-		// 初始加载时触发一次
-		handleRouteChange();
-
-		// 清理监听器
+		// Cleanup
 		return () => {
-			observer.disconnect();
-			window.removeEventListener("popstate", handleRouteChange);
-			clearTimeout(timer);
+			if (timerRef.current) clearTimeout(timerRef.current);
+			if (intervalRef.current) clearInterval(intervalRef.current);
 		};
 	}, []);
 
 	return progress > 0 ? (
-		<div className="fixed top-0 left-0 right-0 z-tooltip w-screen">
+		<div className="fixed top-0 left-0 right-0 z-tooltip w-screen pointer-events-none">
 			<Progress value={progress} className="h-[3px] shadow-2xl" />
 		</div>
 	) : null;

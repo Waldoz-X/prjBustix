@@ -1,4 +1,5 @@
-import { Navigate } from "react-router";
+import { useEffect } from "react";
+import { useNavigate } from "react-router";
 import LoginBgImg from "@/assets/images/background/login-bg.png";
 import LocalePicker from "@/components/locale-picker";
 import Logo from "@/components/logo";
@@ -14,9 +15,18 @@ import ResetForm from "./reset-form";
 
 function LoginPage() {
 	const token = useUserToken();
+	const navigate = useNavigate();
 
+	// Usar un efecto para la redirección segura si hay token
+	useEffect(() => {
+		if (token.accessToken) {
+			navigate(GLOBAL_CONFIG.defaultRoute, { replace: true });
+		}
+	}, [token.accessToken, navigate]);
+
+	// Si hay token, no renderizar la página de login
 	if (token.accessToken) {
-		return <Navigate to={GLOBAL_CONFIG.defaultRoute} replace />;
+		return null;
 	}
 
 	return (

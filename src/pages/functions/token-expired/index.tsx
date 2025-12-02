@@ -25,10 +25,11 @@ export default function TokenExpired() {
 
 			toast.success(data.message || "Sesión cerrada exitosamente");
 
-			// Redirigir al login después de 1 segundo
-			setTimeout(() => {
+			// Redirigir al login usando microtask en lugar de setTimeout
+			// para evitar conflictos con el árbol de React
+			Promise.resolve().then(() => {
 				navigate("/auth/login", { replace: true });
-			}, 1000);
+			});
 		},
 		onError: (error: any) => {
 			logger.error("Error al cerrar sesión:", error);
@@ -41,9 +42,10 @@ export default function TokenExpired() {
 
 			toast.error(error.message || "Error al cerrar sesión, pero se limpió la sesión local");
 
-			setTimeout(() => {
+			// Usar microtask en lugar de setTimeout
+			Promise.resolve().then(() => {
 				navigate("/auth/login", { replace: true });
-			}, 1000);
+			});
 		},
 	});
 

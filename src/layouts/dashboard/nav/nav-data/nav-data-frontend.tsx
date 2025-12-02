@@ -62,11 +62,13 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Eventos Disponibles",
 				path: "/events",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
+				auth: ["User"],
 			},
 			{
 				title: "Mis Boletos",
 				path: "/profile/tickets",
 				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
+				auth: ["User"],
 			},
 		],
 	},

@@ -14,7 +14,7 @@ export async function apiReverseGeocode(lat: number, lon: number): Promise<strin
 			return data.features[0].properties.county || "Ciudad desconocida";
 		}
 		return "Ciudad desconocida";
-	} catch (error: any) {
+	} catch (_error: any) {
 		return "Ciudad desconocida";
 	}
 }
@@ -60,9 +60,9 @@ export async function apiGetExactAddress(lat: number, lon: number): Promise<{ ad
 			return { address, state };
 		}
 		return { address: "Ubicación no disponible", state: "Estado desconocido" };
-	} catch (error: any) {
+	} catch (_error: any) {
 		if (typeof window !== "undefined") {
-			console.error("Geoapify error", error);
+			console.error("Geoapify error", _error);
 		}
 		return { address: "Ubicación no disponible", state: "Estado desconocido" };
 	}
