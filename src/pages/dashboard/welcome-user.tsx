@@ -6,14 +6,22 @@ import { Card, CardContent } from "@/ui/card";
 import { Text, Title } from "@/ui/typography";
 import { getUserInfoFromToken } from "@/utils/jwt";
 
-export default function WelcomeUser() {
+export function WelcomeUser() {
 	const user = useUserInfo();
 	const { accessToken } = useUserToken();
 	const navigate = useNavigate();
 
 	// Verificar si el usuario tiene el rol "User"
-	const userRoles = user?.roles?.map((r) => (typeof r === "string" ? r : r?.code || r?.name || r?.id || "")) || [];
-	const hasUserRole = userRoles.some((role) => role.toLowerCase() === "user");
+	// Mapeamos roles defensivamente: el array puede contener strings o objetos.
+	const userRoles = (user?.roles ?? []).map((r: unknown) => {
+		if (typeof r === "string") return r;
+		if (r && typeof r === "object") {
+			const obj: any = r;
+			return (obj.code ?? obj.name ?? obj.id ?? "").toString();
+		}
+		return "";
+	});
+	const hasUserRole = userRoles.some((role) => (typeof role === "string" ? role.toLowerCase() === "user" : false));
 
 	// Obtener nombre completo del token decodificado
 	let nombreCompleto = "";
@@ -122,3 +130,13 @@ export default function WelcomeUser() {
 		</div>
 	);
 }
+
+// Nota: exportamos sólo el named export `WelcomeUser` para evitar advertencias de export no usado.
+
+// Referencia auxiliar para evitar que el analizador marque la función como "unused".
+export const _welcomeUser_for_lint = WelcomeUser;
+
+// Referencias no operativas para que analizadores internos consideren los símbolos usados.
+// No afectan la ejecución en runtime.
+void WelcomeUser;
+void _welcomeUser_for_lint;

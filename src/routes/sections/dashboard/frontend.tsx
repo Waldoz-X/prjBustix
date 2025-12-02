@@ -1,6 +1,11 @@
+import { lazy } from "react";
 import type { RouteObject } from "react-router";
 import { Navigate } from "react-router";
 import { Component } from "./utils";
+
+const RevenuePage = lazy(() => import("@/pages/finance/revenue"));
+const PaymentsPage = lazy(() => import("@/pages/finance/payments"));
+const FinancialReportsPage = lazy(() => import("@/pages/finance/reports"));
 
 export function getFrontendDashboardRoutes(): RouteObject[] {
 	return [
@@ -59,9 +64,9 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 			path: "finance",
 			children: [
 				{ index: true, element: <Navigate to="revenue" replace /> },
-				{ path: "revenue", element: Component("/pages/finance/revenue") },
-				{ path: "payments", element: Component("/pages/finance/payments") },
-				{ path: "reports", element: Component("/pages/finance/reports") },
+				{ path: "revenue", element: <RevenuePage /> },
+				{ path: "payments", element: <PaymentsPage /> },
+				{ path: "reports", element: <FinancialReportsPage /> },
 			],
 		},
 
