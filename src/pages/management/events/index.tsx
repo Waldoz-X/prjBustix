@@ -222,6 +222,10 @@ export default function EventosPage() {
 	const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 	const [selectedEvento, setSelectedEvento] = useState<EventoDto | null>(null);
 
+	// Estado de paginación
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 10;
+
 	// Estado del formulario
 	const [formData, setFormData] = useState<FormDataType>({
 		nombre: "",
@@ -758,6 +762,12 @@ export default function EventosPage() {
 			evento.tipoEvento.toLowerCase().includes(searchTerm.toLowerCase()),
 	);
 
+	// Lógica de paginación
+	const totalPages = Math.ceil(filteredEventos.length / itemsPerPage);
+	const startIndex = (currentPage - 1) * itemsPerPage;
+	const endIndex = startIndex + itemsPerPage;
+	const paginatedEventos = filteredEventos.slice(startIndex, endIndex);
+
 	return (
 		<div className="space-y-6 p-6">
 			{/* Header */}
@@ -796,7 +806,10 @@ export default function EventosPage() {
 								id="search"
 								placeholder="Nombre, ciudad, tipo..."
 								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
+								onChange={(e) => {
+									setSearchTerm(e.target.value);
+									setCurrentPage(1);
+								}}
 							/>
 						</div>
 						<div className="space-y-2">
@@ -805,16 +818,20 @@ export default function EventosPage() {
 								id="ciudad"
 								placeholder="Filtrar por ciudad"
 								value={filters.ciudad || ""}
-								onChange={(e) => setFilters({ ...filters, ciudad: e.target.value || undefined })}
+								onChange={(e) => {
+									setFilters({ ...filters, ciudad: e.target.value || undefined });
+									setCurrentPage(1);
+								}}
 							/>
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="soloActivos">Estado</Label>
 							<Select
 								value={filters.soloActivos?.toString() || "all"}
-								onValueChange={(val) =>
-									setFilters({ ...filters, soloActivos: val === "all" ? undefined : val === "true" })
-								}
+								onValueChange={(val) => {
+									setFilters({ ...filters, soloActivos: val === "all" ? undefined : val === "true" });
+									setCurrentPage(1);
+								}}
 							>
 								<SelectTrigger id="soloActivos">
 									<SelectValue placeholder="Todos" />
@@ -847,71 +864,121 @@ export default function EventosPage() {
 							<Loader2 className="h-8 w-8 animate-spin text-primary" />
 						</div>
 					) : filteredEventos.length > 0 ? (
-						<div className="rounded-md border">
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Nombre</TableHead>
-										<TableHead>Tipo</TableHead>
-										<TableHead>Fecha</TableHead>
-										<TableHead>Recinto</TableHead>
-										<TableHead>Ciudad</TableHead>
-										<TableHead className="text-center">Viajes</TableHead>
-										<TableHead className="text-center">Estado</TableHead>
-										<TableHead className="text-right">Acciones</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{filteredEventos.map((evento) => (
-										<TableRow key={evento.eventoID}>
-											<TableCell className="font-medium">{evento.nombre}</TableCell>
-											<TableCell>
-												<Badge variant="outline">{evento.tipoEvento}</Badge>
-											</TableCell>
-											<TableCell>{formatDate(evento.fecha)}</TableCell>
-											<TableCell>{evento.recinto}</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-1">
-													<MapPin className="h-3 w-3" />
-													{evento.ciudad}
-												</div>
-											</TableCell>
-											<TableCell className="text-center">
-												<Badge variant="secondary">{evento.totalViajes || 0}</Badge>
-											</TableCell>
-											<TableCell className="text-center">
-												<Badge variant={evento.estatus === 1 ? "default" : "secondary"}>{evento.estatusNombre}</Badge>
-											</TableCell>
-											<TableCell className="text-right">
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" size="icon">
-															<MoreHorizontal className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuLabel>Acciones</DropdownMenuLabel>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem onClick={() => handleViewDetails(evento)}>
-															<Eye className="mr-2 h-4 w-4" />
-															Ver detalles
-														</DropdownMenuItem>
-														<DropdownMenuItem onClick={() => handleEdit(evento)}>
-															<Edit className="mr-2 h-4 w-4" />
-															Editar
-														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem onClick={() => handleDelete(evento)} className="text-destructive">
-															<Trash2 className="mr-2 h-4 w-4" />
-															Eliminar
-														</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
-											</TableCell>
+						<div className="space-y-4">
+							<div className="rounded-md border">
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Nombre</TableHead>
+											<TableHead>Tipo</TableHead>
+											<TableHead>Fecha</TableHead>
+											<TableHead>Recinto</TableHead>
+											<TableHead>Ciudad</TableHead>
+											<TableHead className="text-center">Viajes</TableHead>
+											<TableHead className="text-center">Estado</TableHead>
+											<TableHead className="text-right">Acciones</TableHead>
 										</TableRow>
-									))}
-								</TableBody>
-							</Table>
+									</TableHeader>
+									<TableBody>
+										{paginatedEventos.map((evento) => (
+											<TableRow key={evento.eventoID}>
+												<TableCell className="font-medium">{evento.nombre}</TableCell>
+												<TableCell>
+													<Badge variant="outline">{evento.tipoEvento}</Badge>
+												</TableCell>
+												<TableCell>{formatDate(evento.fecha)}</TableCell>
+												<TableCell>{evento.recinto}</TableCell>
+												<TableCell>
+													<div className="flex items-center gap-1">
+														<MapPin className="h-3 w-3" />
+														{evento.ciudad}
+													</div>
+												</TableCell>
+												<TableCell className="text-center">
+													<Badge variant="secondary">{evento.totalViajes || 0}</Badge>
+												</TableCell>
+												<TableCell className="text-center">
+													<Badge variant={evento.estatus === 1 ? "default" : "secondary"}>{evento.estatusNombre}</Badge>
+												</TableCell>
+												<TableCell className="text-right">
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button variant="ghost" size="icon">
+																<MoreHorizontal className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end">
+															<DropdownMenuLabel>Acciones</DropdownMenuLabel>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem onClick={() => handleViewDetails(evento)}>
+																<Eye className="mr-2 h-4 w-4" />
+																Ver detalles
+															</DropdownMenuItem>
+															<DropdownMenuItem onClick={() => handleEdit(evento)}>
+																<Edit className="mr-2 h-4 w-4" />
+																Editar
+															</DropdownMenuItem>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem onClick={() => handleDelete(evento)} className="text-destructive">
+																<Trash2 className="mr-2 h-4 w-4" />
+																Eliminar
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							</div>
+
+							{/* Paginación */}
+							<div className="flex items-center justify-between">
+								<div className="text-sm text-muted-foreground">
+									Mostrando {startIndex + 1} a {Math.min(endIndex, filteredEventos.length)} de {filteredEventos.length}{" "}
+									eventos
+								</div>
+								<div className="flex items-center space-x-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+										disabled={currentPage === 1}
+									>
+										Anterior
+									</Button>
+									<div className="flex items-center gap-1">
+										{Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+											// Lógica simple para mostrar páginas cercanas a la actual
+											let pageNum = i + 1;
+											if (totalPages > 5 && currentPage > 3) {
+												pageNum = currentPage - 2 + i;
+											}
+											if (pageNum > totalPages) return null;
+
+											return (
+												<Button
+													key={pageNum}
+													variant={currentPage === pageNum ? "default" : "outline"}
+													size="sm"
+													className="w-8 h-8 p-0"
+													onClick={() => setCurrentPage(pageNum)}
+												>
+													{pageNum}
+												</Button>
+											);
+										})}
+									</div>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+										disabled={currentPage === totalPages}
+									>
+										Siguiente
+									</Button>
+								</div>
+							</div>
 						</div>
 					) : (
 						<div className="flex flex-col items-center justify-center min-h-[400px] text-center">

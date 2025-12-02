@@ -75,6 +75,14 @@ export default function CheckInPage() {
 		observaciones: "",
 	});
 
+	// Ticket Action State
+	const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+	const [cancelReason, setCancelReason] = useState("");
+	const [isChangeSeatModalOpen, setIsChangeSeatModalOpen] = useState(false);
+	const [newSeat, setNewSeat] = useState("");
+	const [isManualCheckinOpen, setIsManualCheckinOpen] = useState(false);
+
 	// Fetch trip details
 	const { data: viajeDetalle } = useQuery({
 		queryKey: ["viaje-detalle", viajeId],
@@ -268,6 +276,59 @@ export default function CheckInPage() {
 			refetchProgress();
 		},
 		onError: (error: any) => toast.error(error.message || "Error al marcar No Show"),
+	});
+
+	const cancelTicketMutation = useMutation({
+		mutationFn: () => {
+			if (!selectedTicketId) throw new Error("No se ha seleccionado un boleto");
+			return boletosService.cancelarBoleto(selectedTicketId, {
+				motivo: cancelReason,
+			});
+		},
+		onSuccess: () => {
+			toast.success("Boleto cancelado correctamente");
+			setIsCancelModalOpen(false);
+			setCancelReason("");
+			setSelectedTicketId(null);
+			refetchManifesto();
+			refetchProgress();
+		},
+		onError: (error: any) => toast.error(error.message || "Error al cancelar boleto"),
+	});
+
+	const changeSeatMutation = useMutation({
+		mutationFn: () => {
+			if (!selectedTicketId) throw new Error("No se ha seleccionado un boleto");
+			return boletosService.cambiarAsiento(selectedTicketId, {
+				nuevoAsiento: newSeat,
+			});
+		},
+		onSuccess: () => {
+			toast.success("Asiento cambiado correctamente");
+			setIsChangeSeatModalOpen(false);
+			setNewSeat("");
+			setSelectedTicketId(null);
+			refetchManifesto();
+		},
+		onError: (error: any) => toast.error(error.message || "Error al cambiar asiento"),
+	});
+
+	const manualCheckinMutation = useMutation({
+		mutationFn: () => {
+			if (!selectedTicketId) throw new Error("No se ha seleccionado un boleto");
+			return boletosService.checkinBoleto(selectedTicketId, {
+				latitud: 0, // TODO: Get real location
+				longitud: 0,
+			});
+		},
+		onSuccess: () => {
+			toast.success("Check-in manual realizado");
+			setIsManualCheckinOpen(false);
+			setSelectedTicketId(null);
+			refetchManifesto();
+			refetchProgress();
+		},
+		onError: (error: any) => toast.error(error.message || "Error al realizar check-in manual"),
 	});
 
 	if (!allowed) {
@@ -629,22 +690,57 @@ export default function CheckInPage() {
 																								>
 																									Validar
 																								</Button>
-																								<Button
-																									size="sm"
-																									variant="ghost"
-																									className="text-destructive hover:text-destructive"
-																									onClick={() => {
-																										if (currentStop) {
-																											markNoShowMutation.mutate({
-																												boletoId: pasajero.boletoID,
-																												paradaId: currentStop.paradaViajeID,
-																											});
-																										}
-																									}}
-																									disabled={markNoShowMutation.isPending}
-																								>
-																									No Show
-																								</Button>
+																								<DropdownMenu>
+																									<DropdownMenuTrigger asChild>
+																										<Button variant="ghost" size="icon">
+																											<MoreVertical className="h-4 w-4" />
+																										</Button>
+																									</DropdownMenuTrigger>
+																									<DropdownMenuContent align="end">
+																										<DropdownMenuItem
+																											onClick={() => {
+																												setSelectedTicketId(pasajero.boletoID);
+																												setIsManualCheckinOpen(true);
+																											}}
+																										>
+																											<CheckCircle2 className="h-4 w-4 mr-2" />
+																											Check-in Manual
+																										</DropdownMenuItem>
+																										<DropdownMenuItem
+																											onClick={() => {
+																												setSelectedTicketId(pasajero.boletoID);
+																												setIsChangeSeatModalOpen(true);
+																											}}
+																										>
+																											<Bus className="h-4 w-4 mr-2" />
+																											Cambiar Asiento
+																										</DropdownMenuItem>
+																										<DropdownMenuItem
+																											className="text-destructive"
+																											onClick={() => {
+																												setSelectedTicketId(pasajero.boletoID);
+																												setIsCancelModalOpen(true);
+																											}}
+																										>
+																											<XCircle className="h-4 w-4 mr-2" />
+																											Cancelar Boleto
+																										</DropdownMenuItem>
+																										<DropdownMenuItem
+																											className="text-destructive"
+																											onClick={() => {
+																												if (currentStop) {
+																													markNoShowMutation.mutate({
+																														boletoId: pasajero.boletoID,
+																														paradaId: currentStop.paradaViajeID,
+																													});
+																												}
+																											}}
+																										>
+																											<AlertTriangle className="h-4 w-4 mr-2" />
+																											Marcar No Show
+																										</DropdownMenuItem>
+																									</DropdownMenuContent>
+																								</DropdownMenu>
 																							</>
 																						)}
 																				</div>
@@ -699,22 +795,57 @@ export default function CheckInPage() {
 																							>
 																								Validar
 																							</Button>
-																							<Button
-																								size="sm"
-																								variant="ghost"
-																								className="text-destructive"
-																								onClick={() => {
-																									if (currentStop) {
-																										markNoShowMutation.mutate({
-																											boletoId: pasajero.boletoID,
-																											paradaId: currentStop.paradaViajeID,
-																										});
-																									}
-																								}}
-																								disabled={markNoShowMutation.isPending}
-																							>
-																								No Show
-																							</Button>
+																							<DropdownMenu>
+																								<DropdownMenuTrigger asChild>
+																									<Button variant="ghost" size="icon">
+																										<MoreVertical className="h-4 w-4" />
+																									</Button>
+																								</DropdownMenuTrigger>
+																								<DropdownMenuContent align="end">
+																									<DropdownMenuItem
+																										onClick={() => {
+																											setSelectedTicketId(pasajero.boletoID);
+																											setIsManualCheckinOpen(true);
+																										}}
+																									>
+																										<CheckCircle2 className="h-4 w-4 mr-2" />
+																										Check-in Manual
+																									</DropdownMenuItem>
+																									<DropdownMenuItem
+																										onClick={() => {
+																											setSelectedTicketId(pasajero.boletoID);
+																											setIsChangeSeatModalOpen(true);
+																										}}
+																									>
+																										<Bus className="h-4 w-4 mr-2" />
+																										Cambiar Asiento
+																									</DropdownMenuItem>
+																									<DropdownMenuItem
+																										className="text-destructive"
+																										onClick={() => {
+																											setSelectedTicketId(pasajero.boletoID);
+																											setIsCancelModalOpen(true);
+																										}}
+																									>
+																										<XCircle className="h-4 w-4 mr-2" />
+																										Cancelar Boleto
+																									</DropdownMenuItem>
+																									<DropdownMenuItem
+																										className="text-destructive"
+																										onClick={() => {
+																											if (currentStop) {
+																												markNoShowMutation.mutate({
+																													boletoId: pasajero.boletoID,
+																													paradaId: currentStop.paradaViajeID,
+																												});
+																											}
+																										}}
+																									>
+																										<AlertTriangle className="h-4 w-4 mr-2" />
+																										Marcar No Show
+																									</DropdownMenuItem>
+																								</DropdownMenuContent>
+																							</DropdownMenu>
 																						</>
 																					)}
 																			</div>
@@ -1012,6 +1143,85 @@ export default function CheckInPage() {
 							disabled={finalizeValidationMutation.isPending}
 						>
 							{finalizeValidationMutation.isPending ? "Finalizando..." : "Confirmar y Finalizar"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Cancel Ticket Modal */}
+			<Dialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Cancelar Boleto</DialogTitle>
+						<DialogDescription>
+							¿Estás seguro de que deseas cancelar este boleto? Esta acción no se puede deshacer.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						<div className="space-y-2">
+							<Label>Motivo de Cancelación</Label>
+							<Textarea
+								placeholder="Indica el motivo..."
+								value={cancelReason}
+								onChange={(e) => setCancelReason(e.target.value)}
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>
+							Cancelar
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => cancelTicketMutation.mutate()}
+							disabled={cancelTicketMutation.isPending || !cancelReason.trim()}
+						>
+							{cancelTicketMutation.isPending ? "Cancelando..." : "Confirmar Cancelación"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Change Seat Modal */}
+			<Dialog open={isChangeSeatModalOpen} onOpenChange={setIsChangeSeatModalOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Cambiar Asiento</DialogTitle>
+						<DialogDescription>Ingresa el nuevo número de asiento para el pasajero.</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						<div className="space-y-2">
+							<Label>Nuevo Asiento</Label>
+							<Input placeholder="Ej. A12" value={newSeat} onChange={(e) => setNewSeat(e.target.value)} />
+						</div>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setIsChangeSeatModalOpen(false)}>
+							Cancelar
+						</Button>
+						<Button
+							onClick={() => changeSeatMutation.mutate()}
+							disabled={changeSeatMutation.isPending || !newSeat.trim()}
+						>
+							{changeSeatMutation.isPending ? "Guardando..." : "Confirmar Cambio"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Manual Check-in Confirm Modal */}
+			<Dialog open={isManualCheckinOpen} onOpenChange={setIsManualCheckinOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Check-in Manual</DialogTitle>
+						<DialogDescription>¿Confirmas que deseas realizar el check-in manual para este pasajero?</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setIsManualCheckinOpen(false)}>
+							Cancelar
+						</Button>
+						<Button onClick={() => manualCheckinMutation.mutate()} disabled={manualCheckinMutation.isPending}>
+							{manualCheckinMutation.isPending ? "Procesando..." : "Confirmar Check-in"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

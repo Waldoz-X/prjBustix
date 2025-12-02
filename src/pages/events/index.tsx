@@ -94,7 +94,7 @@ export default function EventsMainPage() {
 					});
 					setPrecioTotal(precioData.precioTotal * ticketCount);
 				} catch (err: any) {
-					message.error("No se pudo calcular el precio: " + (err?.message || ""));
+					message.error(`No se pudo calcular el precio: ${err?.message || ""}`);
 					if (paradaSeleccionada) {
 						setPrecioTotal(paradaSeleccionada.totalAPagar * ticketCount);
 					}
@@ -284,13 +284,13 @@ export default function EventsMainPage() {
 			if (err.message.includes("Failed to fetch") || err.message.includes("ERR_FAILED")) {
 				message.error("No se pudo conectar con el servidor. Verifica que el backend esté funcionando.");
 			} else if (err.message.includes("400")) {
-				message.error("Datos inválidos: " + (err?.message || ""));
+				message.error(`Datos inválidos: ${err?.message || ""}`);
 			} else if (err.message.includes("401")) {
 				message.error("No tienes autorización. Inicia sesión nuevamente.");
 			} else if (err.message.includes("500")) {
 				message.error("Error en el servidor. Contacta al administrador.");
 			} else {
-				message.error("No se pudo iniciar la compra: " + (err?.message || "Error desconocido"));
+				message.error(`No se pudo iniciar la compra: ${err?.message || "Error desconocido"}`);
 			}
 		}
 	};
@@ -344,7 +344,7 @@ export default function EventsMainPage() {
 		} catch (err: any) {
 			console.error("❌ Error al confirmar pago:", err);
 			setShowLoadingScreen(false);
-			message.error("Error al confirmar el pago: " + (err?.message || "Error desconocido"));
+			message.error(`Error al confirmar el pago: ${err?.message || "Error desconocido"}`);
 		}
 	};
 
@@ -823,7 +823,7 @@ export default function EventsMainPage() {
 												onChange={(e) => {
 													let value = e.target.value.replace(/[^0-9]/g, "");
 													if (value.length >= 2) {
-														value = value.slice(0, 2) + "/" + value.slice(2, 4);
+														value = `${value.slice(0, 2)}/${value.slice(2, 4)}`;
 													}
 													setCardData({ ...cardData, expiry: value });
 												}}

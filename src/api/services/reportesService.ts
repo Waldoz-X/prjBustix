@@ -257,6 +257,58 @@ interface ComparacionMetrica {
 	tendencia: string;
 }
 
+export interface ReporteFinancieroPagosDto {
+	desde: string;
+	hasta: string;
+	totalPagos: number;
+	montoTotal: number;
+	porProveedor: {
+		proveedor: string;
+		total: number;
+		count: number;
+	}[];
+	porMetodo: {
+		metodo: string;
+		total: number;
+		count: number;
+	}[];
+	porEstatus: {
+		estatus: number;
+		total: number;
+		count: number;
+	}[];
+}
+
+export interface ReporteFinancieroIngresosDto {
+	desde: string;
+	hasta: string;
+	ingresoTotal: number;
+	ingresoBase: number;
+	descuentos: number;
+	cargos: number;
+	agrupado: {
+		fecha: string;
+		ingreso: number;
+		boletos: number;
+	}[];
+}
+
+export interface ReporteFinancieroVentasDto {
+	desde: string;
+	hasta: string;
+	totalBoletos: number;
+	ingresoTotal: number;
+	ingresoBase: number;
+	descuentos: number;
+	cargos: number;
+	ticketPromedio: number;
+	ventasPorRuta: {
+		rutaId: number;
+		ingresos: number;
+		boletos: number;
+	}[];
+}
+
 // ==================== FUNCIONES ====================
 
 /**
@@ -381,6 +433,45 @@ const getReporteComparacion = async (params: {
 	return await handleResponse(response);
 };
 
+const getReporteFinancieroPagos = async (params?: {
+	fechaDesde?: string;
+	fechaHasta?: string;
+	proveedor?: string;
+	metodo?: string;
+}): Promise<ReporteFinancieroPagosDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	if (params?.proveedor) queryParams.append("proveedor", params.proveedor);
+	if (params?.metodo) queryParams.append("metodo", params.metodo);
+	const response = await fetch(`${BASE_URL}/financieros/pagos?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReporteFinancieroIngresos = async (params?: {
+	fechaDesde?: string;
+	fechaHasta?: string;
+	agruparPor?: string;
+}): Promise<ReporteFinancieroIngresosDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	if (params?.agruparPor) queryParams.append("agruparPor", params.agruparPor);
+	const response = await fetch(`${BASE_URL}/financieros/ingresos?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
+const getReporteFinancieroVentas = async (params?: {
+	fechaDesde?: string;
+	fechaHasta?: string;
+}): Promise<ReporteFinancieroVentasDto> => {
+	const queryParams = new URLSearchParams();
+	if (params?.fechaDesde) queryParams.append("fechaDesde", params.fechaDesde);
+	if (params?.fechaHasta) queryParams.append("fechaHasta", params.fechaHasta);
+	const response = await fetch(`${BASE_URL}/financieros/ventas?${queryParams}`, { headers: getHeaders() });
+	return await handleResponse(response);
+};
+
 const reportesService = {
 	getReporteVentas,
 	getReporteOcupacion,
@@ -391,6 +482,9 @@ const reportesService = {
 	getReporteIncidenciasDetalle,
 	getReporteComparacion,
 	getReportePuntualidad,
+	getReporteFinancieroPagos,
+	getReporteFinancieroIngresos,
+	getReporteFinancieroVentas,
 };
 
 export default reportesService;

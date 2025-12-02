@@ -62,11 +62,7 @@ export const frontendNavData: NavProps["data"] = [
 				title: "Eventos Disponibles",
 				path: "/events",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
-			},
-			{
-				title: "Mis Boletos",
-				path: "/profile/tickets",
-				icon: <Icon icon="solar:ticket-bold-duotone" size="24" />,
+				auth: ["User"],
 			},
 		],
 	},
@@ -167,10 +163,12 @@ export const frontendNavData: NavProps["data"] = [
 					{
 						title: "Lista de Operadores",
 						path: "/operators/list",
+						auth: ["Admin", "Manager"],
 					},
 					{
 						title: "Roles y Permisos",
 						path: "/operators/roles",
+						auth: ["Admin", "Manager"],
 					},
 					{
 						title: "Gestión de Accesos",
@@ -188,6 +186,7 @@ export const frontendNavData: NavProps["data"] = [
 					{
 						title: "Gestión de Incidencias",
 						path: "/incidents",
+						auth: ["Admin", "Manager", "Operator", "Staff"],
 					},
 					{
 						title: "Mis Reportes",
