@@ -58,7 +58,7 @@ export default function PublicHeader() {
 						</button>
 						<button
 							type="button"
-							onClick={() => navigate("/register")}
+							onClick={() => navigate("/auth/register")}
 							className="whitespace-nowrap rounded-lg bg-gradient-to-r from-[#A6402C] to-[#803549] px-3 py-1.5 text-xs font-medium text-white shadow-md transition-all hover:shadow-lg xl:px-4 xl:py-2 xl:text-sm"
 						>
 							Registrarse
@@ -110,7 +110,7 @@ export default function PublicHeader() {
 							type="button"
 							onClick={() => {
 								setMobileMenuOpen(false);
-								navigate("/register");
+								navigate("/auth/register");
 							}}
 							className="w-full rounded-lg bg-gradient-to-r from-[#A6402C] to-[#803549] px-4 py-2 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg sm:py-2.5 sm:text-base"
 						>

@@ -20,12 +20,15 @@ const LoginStateContext = createContext<LoginStateContextType>({
 });
 
 export function useLoginStateContext() {
-	const context = useContext(LoginStateContext);
-	return context;
+	return useContext(LoginStateContext);
 }
 
-export function LoginProvider({ children }: PropsWithChildren) {
-	const [loginState, setLoginState] = useState(LoginStateEnum.LOGIN);
+interface LoginProviderProps extends PropsWithChildren {
+	initialLoginState?: LoginStateEnum;
+}
+
+export function LoginProvider({ children, initialLoginState = LoginStateEnum.LOGIN }: LoginProviderProps) {
+	const [loginState, setLoginState] = useState(initialLoginState);
 
 	function backToLogin() {
 		setLoginState(LoginStateEnum.LOGIN);

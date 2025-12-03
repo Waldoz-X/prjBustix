@@ -14,6 +14,10 @@ const authCustom: RouteObject[] = [
 		path: "confirm-email",
 		element: <ConfirmEmailPage />,
 	},
+	{
+		path: "register",
+		element: <LoginPage />,
+	},
 ];
 
 export const authRoutes: RouteObject[] = [

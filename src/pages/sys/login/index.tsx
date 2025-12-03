@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import LoginBgImg from "@/assets/images/background/login-bg.png";
 import LocalePicker from "@/components/locale-picker";
 import Logo from "@/components/logo";
@@ -8,7 +8,7 @@ import SettingButton from "@/layouts/components/setting-button";
 import { useUserToken } from "@/store/userStore";
 import LoginForm from "./login-form";
 import MobileForm from "./mobile-form";
-import { LoginProvider } from "./providers/login-provider";
+import { LoginProvider, LoginStateEnum } from "./providers/login-provider";
 import QrCodeFrom from "./qrcode-form";
 import RegisterForm from "./register-form";
 import ResetForm from "./reset-form";
@@ -16,6 +16,8 @@ import ResetForm from "./reset-form";
 function LoginPage() {
 	const token = useUserToken();
 	const navigate = useNavigate();
+	const location = useLocation();
+	const isRegister = location.pathname.includes("register");
 
 	// Usar un efecto para la redirección segura si hay token
 	useEffect(() => {
@@ -40,7 +42,7 @@ function LoginPage() {
 				</div>
 				<div className="flex flex-1 items-center justify-center">
 					<div className="w-full max-w-xs">
-						<LoginProvider>
+						<LoginProvider initialLoginState={isRegister ? LoginStateEnum.REGISTER : LoginStateEnum.LOGIN}>
 							<LoginForm />
 							<MobileForm />
 							<QrCodeFrom />
