@@ -300,12 +300,6 @@ export const frontendNavData: NavProps["data"] = [
 				icon: <Icon icon="solar:document-text-bold-duotone" size="24" />,
 				auth: ["Admin"],
 			},
-			{
-				title: "Configuración General",
-				path: "/settings",
-				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
-				auth: ["Admin"],
-			},
 		],
 	},
 

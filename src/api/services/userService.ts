@@ -87,6 +87,26 @@ export interface UsersAtRiskDto {
 	}>;
 }
 
+export interface UserProfileDto {
+	id: string;
+	nombreCompleto: string;
+	email: string;
+	telefono: string | null;
+	tipoDocumento: string;
+	numeroDocumento: string;
+	fechaNacimiento: string | null;
+	direccion: string | null;
+	ciudad: string | null;
+	estado: string | null;
+	codigoPostal: string | null;
+	urlFotoPerfil: string | null;
+	notificacionesPush: boolean;
+	notificacionesEmail: boolean;
+	estatus: string;
+	fechaRegistro: string;
+	ultimaConexion: string;
+}
+
 const BASE_URL = "https://waldoz-001-site1.stempurl.com/api/Account";
 
 /**
@@ -340,6 +360,27 @@ const updateProfile = async (data: UpdateUserProfileDto): Promise<void> => {
 };
 
 /**
+ * Actualizar datos de un usuario específico (Admin)
+ */
+const updateUser = async (
+	userId: string,
+	data: {
+		nombreCompleto: string;
+		phoneNumber?: string;
+		tipoDocumento?: string;
+		numeroDocumento?: string;
+	},
+): Promise<void> => {
+	const response = await fetch(`${BASE_URL}/${userId}`, {
+		method: "PUT",
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+
+	return await handleResponse(response);
+};
+
+/**
  * Actualizar estatus de un usuario
  */
 const updateStatus = async (userId: string, data: UpdateUserStatusDto): Promise<void> => {
@@ -439,6 +480,26 @@ const getUsersAtRisk = async (): Promise<UsersAtRiskDto> => {
 	console.log(`[UserService] Users at risk:`, data);
 
 	return data;
+};
+
+/**
+ * GET /api/me/perfil
+ * Obtener perfil completo del usuario actual
+ */
+const getMeProfile = async (): Promise<UserProfileDto> => {
+	// Construir URL reemplazando /Account con /me/perfil
+	// BASE_URL = ".../api/Account" -> Target = ".../api/me/perfil"
+	const url = BASE_URL.replace("/Account", "/me/perfil");
+	console.log(`[UserService] Fetching profile from ${url}`);
+
+	const response = await fetch(url, {
+		method: "GET",
+		headers: getHeaders(),
+	});
+
+	const result = await handleResponse(response);
+	// La respuesta viene en formato { success: true, data: { ... } }
+	return result.data;
 };
 
 /**
@@ -670,6 +731,7 @@ const userService = {
 	getPermissions,
 	createUser,
 	updateProfile,
+	updateUser,
 	updateStatus,
 	unlockUser,
 	lockUser,
@@ -677,6 +739,7 @@ const userService = {
 	getLockedUsers,
 	getLockoutInfo,
 	getUsersAtRisk,
+	getMeProfile,
 	forgotPassword,
 	changePassword,
 	resetPassword,

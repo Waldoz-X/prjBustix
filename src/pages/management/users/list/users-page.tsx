@@ -347,19 +347,22 @@ export default function UsersPage() {
 		},
 	});
 
-	// Mutation para actualizar perfil
+	// Mutation para actualizar usuario (Admin)
 	const updateProfileMutation = useMutation({
 		mutationFn: (data: {
 			nombreCompleto: string;
 			phoneNumber?: string;
 			tipoDocumento?: string;
 			numeroDocumento?: string;
-		}) => userService.updateProfile(data),
+		}) => {
+			if (!selectedUser) throw new Error("No user selected");
+			return userService.updateUser(selectedUser.id, data);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["user-stats"] });
 			refetchUsers();
-			toast.success("Perfil actualizado", {
+			toast.success("Usuario actualizado", {
 				description: "Los datos del usuario se han actualizado correctamente",
 			});
 			setIsEditDialogOpen(false);
@@ -367,7 +370,7 @@ export default function UsersPage() {
 		},
 		onError: (err: any) => {
 			const safeError = handleApiError(err);
-			toast.error("Error al actualizar perfil", {
+			toast.error("Error al actualizar usuario", {
 				description: safeError.userMessage,
 			});
 		},
