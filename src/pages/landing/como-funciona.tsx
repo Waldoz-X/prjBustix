@@ -2,6 +2,15 @@
 // landing/como-funciona.tsx
 // Página de cómo funciona - BusTix - Paleta elegante
 // -----------------------------------------------------------------------------
+
+// Import images
+import faq1 from "@/assets/images/landing/faq/faq_1.png";
+import faq2 from "@/assets/images/landing/faq/faq_2.png";
+import faq3 from "@/assets/images/landing/faq/faq_3.png";
+import faq4 from "@/assets/images/landing/faq/faq_4.png";
+import faq5 from "@/assets/images/landing/faq/faq_5.png";
+import faq6 from "@/assets/images/landing/faq/faq_6.png";
+import landing1 from "@/assets/images/landing/landing_1.png";
 import { Icon } from "@/components/icon";
 import { Card } from "@/ui/card";
 
@@ -12,7 +21,7 @@ export default function ComoFunciona() {
 			titulo: "Explora Eventos",
 			descripcion: "Navega por nuestra selección de conciertos y festivales disponibles",
 			icono: "solar:calendar-search-bold-duotone",
-			imagen: "/src/assets/images/landing/faq/faq_1.png",
+			imagen: faq1,
 			detalles: [
 				"Filtra por género musical",
 				"Revisa fechas y ubicaciones",
@@ -25,7 +34,7 @@ export default function ComoFunciona() {
 			titulo: "Selecciona tu Viaje",
 			descripcion: "Elige el evento, fecha y punto de salida que más te convenga",
 			icono: "solar:ticket-bold-duotone",
-			imagen: "/src/assets/images/landing/faq/faq_2.png",
+			imagen: faq2,
 			detalles: [
 				"Múltiples puntos de salida",
 				"Opciones de horario flexible",
@@ -38,7 +47,7 @@ export default function ComoFunciona() {
 			titulo: "Reserva y Paga",
 			descripcion: "Completa tu reservación de forma segura con múltiples métodos de pago",
 			icono: "solar:card-bold-duotone",
-			imagen: "/src/assets/images/landing/faq/faq_3.png",
+			imagen: faq3,
 			detalles: [
 				"Pago con tarjeta o transferencia",
 				"Plataforma 100% segura",
@@ -51,7 +60,7 @@ export default function ComoFunciona() {
 			titulo: "Prepárate para Viajar",
 			descripcion: "Recibe toda la información necesaria para tu viaje",
 			icono: "solar:letter-opened-bold-duotone",
-			imagen: "/src/assets/images/landing/faq/faq_4.png",
+			imagen: faq4,
 			detalles: [
 				"Punto de encuentro exacto",
 				"Hora de salida y llegada",
@@ -64,7 +73,7 @@ export default function ComoFunciona() {
 			titulo: "Disfruta el Viaje",
 			descripcion: "Sube al autobús y relájate mientras te llevamos a tu destino",
 			icono: "solar:bus-bold-duotone",
-			imagen: "/src/assets/images/landing/faq/faq_5.png",
+			imagen: faq5,
 			detalles: ["WiFi gratis a bordo", "Asientos cómodos", "Aire acondicionado", "Servicio de snacks"],
 		},
 		{
@@ -72,7 +81,7 @@ export default function ComoFunciona() {
 			titulo: "Vive la Experiencia",
 			descripcion: "Llega al evento, disfruta y nosotros te llevamos de regreso",
 			icono: "solar:star-bold-duotone",
-			imagen: "/src/assets/images/landing/faq/faq_6.png",
+			imagen: faq6,
 			detalles: [
 				"Entrada directa al evento",
 				"Zona de estacionamiento VIP",
@@ -123,7 +132,7 @@ export default function ComoFunciona() {
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
 					style={{
-						backgroundImage: "url('/src/assets/images/landing/landing_1.png')",
+						backgroundImage: `url(${landing1})`,
 						backgroundBlendMode: "overlay",
 					}}
 				/>

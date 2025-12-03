@@ -157,26 +157,29 @@ export default function Contacto() {
 											{/* Gradiente de fondo animado */}
 											<div className="absolute inset-0 bg-gradient-to-br from-[#A6402C]/0 to-[#803549]/0 transition-all duration-300 group-hover:from-[#A6402C]/5 group-hover:to-[#803549]/5" />
 
-											<a href={item.link} className="relative flex items-start gap-4 transition-colors">
+											<a
+												href={item.link}
+												className="relative flex items-start gap-4 !text-[#1A1A1A] transition-colors hover:!text-[#1A1A1A]"
+											>
 												<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#A6402C]/10 to-[#803549]/10 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:from-[#A6402C]/20 group-hover:to-[#803549]/20 group-hover:shadow-xl">
 													<Icon
 														icon={item.icono}
 														size={24}
-														className="text-[#A6402C] transition-transform duration-300 group-hover:scale-110"
+														className="!text-[#1A1A1A] transition-all duration-300 group-hover:scale-110 group-hover:!text-[#A6402C]"
 													/>
 												</div>
 												<div className="flex-1">
 													<div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#A9A9A9]">
 														{item.titulo}
 													</div>
-													<div className="text-sm font-semibold text-[#1A1A1A] transition-colors duration-300 group-hover:text-[#A6402C]">
+													<div className="text-sm font-semibold !text-[#1A1A1A] transition-colors duration-300 group-hover:!text-[#A6402C]">
 														{item.info}
 													</div>
 												</div>
 												<Icon
 													icon="solar:arrow-right-bold"
 													size={20}
-													className="flex-shrink-0 text-[#A9A9A9] opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-[#A6402C]"
+													className="flex-shrink-0 text-[#A9A9A9] opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100 group-hover:!text-[#A6402C]"
 												/>
 											</a>
 										</Card>
@@ -192,16 +195,16 @@ export default function Contacto() {
 								</h3>
 								<div className="flex gap-3">
 									{[
-										{ icon: "solar:facebook-bold", link: "#", name: "Facebook" },
-										{ icon: "solar:instagram-bold", link: "#", name: "Instagram" },
-										{ icon: "solar:twitter-bold", link: "#", name: "Twitter" },
-										{ icon: "solar:linkedin-bold", link: "#", name: "LinkedIn" },
+										{ icon: "mdi:facebook", link: "#", name: "Facebook" },
+										{ icon: "mdi:instagram", link: "#", name: "Instagram" },
+										{ icon: "mdi:twitter", link: "#", name: "Twitter" },
+										{ icon: "mdi:linkedin", link: "#", name: "LinkedIn" },
 									].map((social) => (
 										<a
 											key={social.name}
 											href={social.link}
 											title={social.name}
-											className="group flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0EBE3] text-[#4A4A4A] shadow-md transition-all duration-300 hover:scale-110 hover:bg-gradient-to-br hover:from-[#A6402C] hover:to-[#803549] hover:text-white hover:shadow-xl hover:shadow-[#A6402C]/30"
+											className="group flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0EBE3] !text-[#4A4A4A] shadow-md transition-all duration-300 hover:scale-110 hover:bg-gradient-to-br hover:from-[#A6402C] hover:to-[#803549] hover:!text-white hover:shadow-xl hover:shadow-[#A6402C]/30"
 										>
 											<Icon
 												icon={social.icon}

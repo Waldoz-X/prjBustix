@@ -342,9 +342,9 @@ export default function Galeria() {
 						</p>
 						<a
 							href="/events"
-							className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 font-bold text-[#A6402C] shadow-lg transition-all hover:bg-[#F0EBE3] hover:scale-105"
+							className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#A6402C] to-[#803549] px-8 py-3 font-bold !text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl hover:shadow-[#A6402C]/50 hover:brightness-110"
 						>
-							<Icon icon="solar:ticket-bold" size={20} />
+							<Icon icon="solar:ticket-bold" size={20} className="!text-white" />
 							Ver Eventos
 						</a>
 					</m.div>

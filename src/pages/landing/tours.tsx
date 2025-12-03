@@ -170,8 +170,8 @@ export default function Tours() {
 					<div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMSI+PHBhdGggZD0iTTM2IDE0YzMuMzE0IDAgNi0yLjY4NiA2LTZzLTIuNjg2LTYtNi02LTYgMi42ODYtNiA2IDIuNjg2IDYgNiA2ek0zNiA1MmMzLjMxNCAwIDYtMi42ODYgNi02cy0yLjY4Ni02LTYtNi02IDIuNjg2LTYgNiAyLjY4NiA2IDYgNnoiLz48L2c+PC9nPjwvc3ZnPg==')] [background-size:40px_40px]"></div>
 				</div>
 				<div className="container relative z-10 mx-auto px-4 text-center lg:px-6">
-					<Badge className="mb-4 bg-white/20 px-4 py-1 text-sm backdrop-blur-sm">
-						<Icon icon="solar:ticket-bold" className="mr-2 inline" size={16} />
+					<Badge className="mb-4 bg-white/20 px-4 py-1 text-sm backdrop-blur-sm !text-white">
+						<Icon icon="solar:ticket-bold" className="mr-2 inline !text-white" size={16} />
 						Cartelera de Eventos 2025
 					</Badge>
 					<h1 className="mb-6 text-4xl font-extrabold sm:text-5xl lg:text-6xl">
